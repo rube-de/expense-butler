@@ -68,8 +68,8 @@
     - Build currency selector and amount input components
     - _Requirements: 1.1, 1.2, 2.1, 3.1_
 
-- [ ] 5. Implement expense entry and management screens
-  - [ ] 5.1 Build AddExpenseScreen with form validation
+- [x] 5. Implement expense entry and management screens
+  - [x] 5.1 Build AddExpenseScreen with form validation
     - Write Compose UI tests for form validation scenarios
     - Create expense entry form with amount, currency, description fields
     - Implement category selection with existing and new category options
@@ -78,14 +78,14 @@
     - Test form functionality on Android simulator using ADB and Espresso
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
 
-  - [ ] 5.2 Create ExpenseListScreen with filtering
+  - [x] 5.2 Create ExpenseListScreen with filtering
     - Build expense list with pagination and infinite scrolling
     - Implement search functionality with text filtering
     - Add filter options for date range, category, and tags
     - Create expense item actions (edit, delete) with confirmation dialogs
     - _Requirements: 7.1, 7.2, 7.4, 7.5_
 
-  - [ ] 5.3 Implement expense editing functionality
+  - [x] 5.3 Implement expense editing functionality
     - Create expense edit screen with pre-populated form fields
     - Add validation for expense updates with proper error handling
     - Implement delete confirmation with undo functionality

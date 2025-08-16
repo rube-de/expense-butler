@@ -20,7 +20,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import com.expensetracker.R
+import com.expensetracker.ui.screens.AddExpenseScreen
+import com.expensetracker.ui.screens.EditExpenseScreen
+import com.expensetracker.ui.screens.ExpenseListScreen
 import com.expensetracker.ui.theme.spacing
 
 data class BottomNavItem(
@@ -91,13 +96,21 @@ fun ExpenseTrackerNavHost(
         modifier = modifier
     ) {
         composable(Screen.ExpenseList.route) {
-            // Placeholder for ExpenseListScreen
-            PlaceholderScreen("Expense List")
+            ExpenseListScreen(
+                onNavigateToAddExpense = { 
+                    navController.navigate(Screen.AddExpense.route)
+                },
+                onNavigateToEditExpense = { expenseId ->
+                    navController.navigate(Screen.EditExpense.createRoute(expenseId))
+                }
+            )
         }
         
         composable(Screen.AddExpense.route) {
-            // Placeholder for AddExpenseScreen
-            PlaceholderScreen("Add Expense")
+            AddExpenseScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onExpenseSaved = { navController.popBackStack() }
+            )
         }
         
         composable(Screen.Analytics.route) {
@@ -118,6 +131,17 @@ fun ExpenseTrackerNavHost(
         composable(Screen.Settings.route) {
             // Placeholder for SettingsScreen
             PlaceholderScreen("Settings")
+        }
+        
+        composable(
+            route = Screen.EditExpense.route,
+            arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
+        ) {
+            EditExpenseScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onExpenseUpdated = { navController.popBackStack() },
+                onExpenseDeleted = { navController.popBackStack() }
+            )
         }
     }
 }
