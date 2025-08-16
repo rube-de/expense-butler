@@ -28,6 +28,7 @@
 - **Android Tests**: Espresso, Compose UI Testing
 - **Room Testing**: Room testing library
 - **Architecture Testing**: Core testing library
+- **Development Approach**: Test-Driven Development (TDD) - See [TDD Guidelines](tdd.md)
 
 ## Common Commands
 
@@ -46,14 +47,22 @@
 ### Testing
 ```bash
 # Run unit tests
-./gradlew test
+./gradlew testDebugUnitTest
 
 # Run instrumented tests
 ./gradlew connectedAndroidTest
 
+# Run all tests with coverage
+./gradlew testDebugUnitTestCoverage
+
+# Run specific test class
+./gradlew testDebugUnitTest --tests "ExpenseRepositoryTest"
+
 # Run all tests
 ./gradlew check
 ```
+
+**TDD Workflow**: Always write tests first following Red-Green-Refactor cycle. See [TDD Guidelines](tdd.md) for detailed practices.
 
 ### Code Quality
 ```bash
