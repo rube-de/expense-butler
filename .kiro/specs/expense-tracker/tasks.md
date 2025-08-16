@@ -12,8 +12,8 @@
   - Set up Hilt application class and basic dependency injection
   - _Requirements: 8.1, 8.5_
 
-- [ ] 2. Implement core data models and database setup
-  - [ ] 2.1 Create Room entities for Expense, Category, and RecurringExpense
+- [x] 2. Implement core data models and database setup
+  - [x] 2.1 Create Room entities for Expense, Category, and RecurringExpense
     - Write unit tests for entity validation and constraints
     - Write Expense entity with proper data types for amount, currency, description, tags
     - Write Category entity with name, color, icon fields
@@ -22,7 +22,7 @@
     - Run tests to verify entity creation and validation
     - _Requirements: 1.1, 1.2, 2.1, 2.2, 5.1_
 
-  - [ ] 2.2 Create Room DAOs with CRUD operations
+  - [x] 2.2 Create Room DAOs with CRUD operations
     - Write DAO unit tests with in-memory database for all CRUD operations
     - Implement ExpenseDao with insert, update, delete, and query methods
     - Implement CategoryDao with category management operations
@@ -31,7 +31,7 @@
     - Run tests to verify all database operations work correctly
     - _Requirements: 1.3, 2.4, 3.4, 7.2_
 
-  - [ ] 2.3 Set up Room database and type converters
+  - [x] 2.3 Set up Room database and type converters
     - Create AppDatabase class with proper entity configuration
     - Implement type converters for BigDecimal, LocalDateTime, and List<String>
     - Add database migration strategy and version management
