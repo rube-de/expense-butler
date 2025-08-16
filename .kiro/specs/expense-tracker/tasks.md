@@ -53,15 +53,15 @@
     - Add validation for category and tag constraints
     - _Requirements: 2.1, 2.2, 3.1, 3.2, 3.3_
 
-- [ ] 4. Build core UI theme and navigation structure
-  - [ ] 4.1 Set up Material Design 3 theme and navigation
+- [x] 4. Build core UI theme and navigation structure
+  - [x] 4.1 Set up Material Design 3 theme and navigation
     - Create Material Design 3 theme with proper color schemes
     - Set up Navigation Compose with main screen destinations
     - Create bottom navigation bar with expense list, add, analytics, AI chat screens
     - Implement navigation state management and deep linking
     - _Requirements: 1.1, 6.1, 7.1_
 
-  - [ ] 4.2 Create reusable UI components
+  - [x] 4.2 Create reusable UI components
     - Build ExpenseCard composable for displaying individual expenses
     - Create CategoryChip component for category selection
     - Implement TagInput component with autocomplete functionality
