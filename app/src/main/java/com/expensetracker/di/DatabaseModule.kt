@@ -6,6 +6,9 @@ import com.expensetracker.data.dao.CategoryDao
 import com.expensetracker.data.dao.ExpenseDao
 import com.expensetracker.data.dao.RecurringExpenseDao
 import com.expensetracker.data.database.AppDatabase
+import com.expensetracker.data.repository.ExpenseRepository
+import com.expensetracker.data.repository.ExpenseRepositoryImpl
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -43,4 +46,15 @@ object DatabaseModule {
     fun provideRecurringExpenseDao(database: AppDatabase): RecurringExpenseDao {
         return database.recurringExpenseDao()
     }
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class RepositoryModule {
+
+    @Binds
+    @Singleton
+    abstract fun bindExpenseRepository(
+        expenseRepositoryImpl: ExpenseRepositoryImpl
+    ): ExpenseRepository
 }

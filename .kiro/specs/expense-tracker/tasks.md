@@ -38,15 +38,15 @@
     - Create database module for Hilt dependency injection
     - _Requirements: 8.1, 8.2, 8.5_
 
-- [ ] 3. Create repository layer and data management
-  - [ ] 3.1 Implement ExpenseRepository with business logic
+- [x] 3. Create repository layer and data management
+  - [x] 3.1 Implement ExpenseRepository with business logic
     - Create ExpenseRepository interface with all required methods
     - Implement repository with Room DAO integration
     - Add data validation and business rule enforcement
     - Implement Flow-based reactive data streams
     - _Requirements: 1.3, 1.4, 7.3, 7.4_
 
-  - [ ] 3.2 Add category and tag management in repository
+  - [x] 3.2 Add category and tag management in repository
     - Implement category CRUD operations with default categories
     - Add tag autocomplete functionality with existing tag suggestions
     - Create methods for filtering expenses by categories and tags
