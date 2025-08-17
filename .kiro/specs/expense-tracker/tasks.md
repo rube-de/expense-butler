@@ -92,15 +92,15 @@
     - Update expense list reactively when changes are made
     - _Requirements: 7.3, 7.4_
 
-- [ ] 6. Build analytics and reporting features
-  - [ ] 6.1 Create AnalyticsViewModel with data processing
+- [-] 6. Build analytics and reporting features
+  - [x] 6.1 Create AnalyticsViewModel with data processing
     - Implement analytics data calculation methods
     - Create period comparison logic for month, quarter, year comparisons
     - Add category breakdown and spending trend calculations
     - Implement tag-based analytics and top spending categories
     - _Requirements: 4.1, 4.2, 4.4, 4.5_
 
-  - [ ] 6.2 Build AnalyticsScreen with charts and insights
+  - [x] 6.2 Build AnalyticsScreen with charts and insights
     - Integrate chart library (Vico) for spending visualizations
     - Create category pie chart with interactive segments
     - Build time-series line chart for spending trends

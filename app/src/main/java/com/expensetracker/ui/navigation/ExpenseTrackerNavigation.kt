@@ -24,6 +24,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import com.expensetracker.R
 import com.expensetracker.ui.screens.AddExpenseScreen
+import com.expensetracker.ui.screens.AnalyticsScreen
 import com.expensetracker.ui.screens.EditExpenseScreen
 import com.expensetracker.ui.screens.ExpenseListScreen
 import com.expensetracker.ui.theme.spacing
@@ -114,8 +115,7 @@ fun ExpenseTrackerNavHost(
         }
         
         composable(Screen.Analytics.route) {
-            // Placeholder for AnalyticsScreen
-            PlaceholderScreen("Analytics")
+            AnalyticsScreen()
         }
         
         composable(Screen.AIChat.route) {
