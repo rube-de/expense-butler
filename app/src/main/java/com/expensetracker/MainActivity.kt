@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ExpenseTrackerTheme {
+                // Main app entry point with navigation
                 ExpenseTrackerApp()
             }
         }
