@@ -44,30 +44,24 @@ class AnalyticsViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _currentFilter = MutableStateFlow(AnalyticsFilter())
+    val currentFilter: StateFlow<AnalyticsFilter> = _currentFilter.asStateFlow()
+
+    private val _categoryDrillDownData = MutableStateFlow<CategoryDrillDownData?>(null)
+    val categoryDrillDownData: StateFlow<CategoryDrillDownData?> = _categoryDrillDownData.asStateFlow()
+
+    private val _availableCategories = MutableStateFlow<List<Category>>(emptyList())
+    val availableCategories: StateFlow<List<Category>> = _availableCategories.asStateFlow()
+
+    private val _availableTags = MutableStateFlow<List<String>>(emptyList())
+    val availableTags: StateFlow<List<String>> = _availableTags.asStateFlow()
+
     /**
      * Loads analytics data for the specified time period.
      */
     fun loadAnalytics(period: TimePeriod) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            try {
-                val (startDate, endDate) = getPeriodDateRange(period)
-                
-                combine(
-                    repository.getAllExpenses(),
-                    repository.getAllCategories()
-                ) { expenses, categories ->
-                    processAnalyticsData(expenses, categories, startDate, endDate)
-                }.collect { analyticsData ->
-                    _analyticsData.value = analyticsData
-                }
-            } catch (e: Exception) {
-                _error.value = "Failed to load analytics data: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        _currentFilter.value = _currentFilter.value.copy(timePeriod = period)
+        loadAnalyticsWithFilter()
     }
 
     /**
@@ -113,10 +107,221 @@ class AnalyticsViewModel @Inject constructor(
     }
 
     /**
+     * Applies filters to the analytics data.
+     */
+    fun applyFilters(
+        selectedCategories: List<Long> = emptyList(),
+        selectedTags: List<String> = emptyList(),
+        customDateRange: DateRange? = null
+    ) {
+        _currentFilter.value = _currentFilter.value.copy(
+            selectedCategories = selectedCategories,
+            selectedTags = selectedTags,
+            customDateRange = customDateRange
+        )
+        
+        // Reload analytics with current filter
+        loadAnalyticsWithFilter()
+    }
+
+    /**
+     * Clears all applied filters.
+     */
+    fun clearFilters() {
+        val currentPeriod = _currentFilter.value.timePeriod
+        _currentFilter.value = AnalyticsFilter(timePeriod = currentPeriod)
+        loadAnalyticsWithFilter()
+    }
+
+    /**
+     * Drills down into a specific category for detailed view.
+     */
+    fun drillDownCategory(categoryId: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                combine(
+                    repository.getExpensesByCategory(categoryId),
+                    repository.getAllCategories()
+                ) { expenses, categories ->
+                    val category = categories.find { it.id == categoryId }
+                    if (category != null) {
+                        val filteredExpenses = applyFilterToExpenses(expenses)
+                        createCategoryDrillDownData(category, filteredExpenses)
+                    } else {
+                        null
+                    }
+                }.collect { drillDownData ->
+                    _categoryDrillDownData.value = drillDownData
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to load category details: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    /**
+     * Closes the drill-down view.
+     */
+    fun closeDrillDown() {
+        _categoryDrillDownData.value = null
+    }
+
+    /**
+     * Exports the current analytics data as a CSV string.
+     */
+    fun exportAnalyticsData(): String {
+        val data = _analyticsData.value
+        val filter = _currentFilter.value
+        val sb = StringBuilder()
+        
+        // Header
+        sb.appendLine("Expense Analytics Export")
+        sb.appendLine("Generated: ${LocalDateTime.now()}")
+        
+        // Applied filters
+        if (filter.selectedCategories.isNotEmpty() || filter.selectedTags.isNotEmpty() || filter.customDateRange != null) {
+            sb.appendLine("\nApplied Filters:")
+            if (filter.selectedCategories.isNotEmpty()) {
+                sb.appendLine("Categories: ${filter.selectedCategories.joinToString()}")
+            }
+            if (filter.selectedTags.isNotEmpty()) {
+                sb.appendLine("Tags: ${filter.selectedTags.joinToString()}")
+            }
+            filter.customDateRange?.let {
+                sb.appendLine("Date Range: ${it.startDate} to ${it.endDate}")
+            }
+        }
+        
+        // Summary
+        sb.appendLine("\nSummary:")
+        sb.appendLine("Total Spending: ${data.totalSpending}")
+        
+        // Category Breakdown
+        sb.appendLine("\nCategory Breakdown:")
+        data.categoryBreakdown.forEach { (category, amount) ->
+            sb.appendLine("${category.name},${amount}")
+        }
+        
+        // Top Tags
+        sb.appendLine("\nTop Tags:")
+        data.topTags.forEach { tagSpending ->
+            sb.appendLine("${tagSpending.tag},${tagSpending.amount},${tagSpending.expenseCount}")
+        }
+        
+        // Monthly Trends
+        sb.appendLine("\nMonthly Trends:")
+        data.monthlyTrends.forEach { monthly ->
+            sb.appendLine("${monthly.month},${monthly.amount},${monthly.expenseCount}")
+        }
+        
+        return sb.toString()
+    }
+
+    /**
      * Clears any error state.
      */
     fun clearError() {
         _error.value = null
+    }
+
+    private fun loadAnalyticsWithFilter() {
+        val filter = _currentFilter.value
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val (startDate, endDate) = if (filter.customDateRange != null) {
+                    filter.customDateRange.startDate to filter.customDateRange.endDate
+                } else {
+                    getPeriodDateRange(filter.timePeriod)
+                }
+                
+                combine(
+                    repository.getAllExpenses(),
+                    repository.getAllCategories()
+                ) { expenses, categories ->
+                    // Update available options for filtering
+                    _availableCategories.value = categories
+                    _availableTags.value = extractAllTags(expenses)
+                    
+                    // Apply filters
+                    val filteredExpenses = applyFilterToExpenses(expenses)
+                    processAnalyticsData(filteredExpenses, categories, startDate, endDate)
+                }.collect { analyticsData ->
+                    _analyticsData.value = analyticsData
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to load analytics data: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    private fun applyFilterToExpenses(expenses: List<Expense>): List<Expense> {
+        val filter = _currentFilter.value
+        var filteredExpenses = expenses
+        
+        // Filter by categories
+        if (filter.selectedCategories.isNotEmpty()) {
+            filteredExpenses = filteredExpenses.filter { it.categoryId in filter.selectedCategories }
+        }
+        
+        // Filter by tags
+        if (filter.selectedTags.isNotEmpty()) {
+            filteredExpenses = filteredExpenses.filter { expense ->
+                expense.tags.any { it in filter.selectedTags }
+            }
+        }
+        
+        // Filter by custom date range
+        filter.customDateRange?.let { dateRange ->
+            filteredExpenses = filteredExpenses.filter { expense ->
+                val expenseDate = expense.date.toLocalDate()
+                !expenseDate.isBefore(dateRange.startDate) && !expenseDate.isAfter(dateRange.endDate)
+            }
+        }
+        
+        return filteredExpenses
+    }
+
+    private fun createCategoryDrillDownData(category: Category, expenses: List<Expense>): CategoryDrillDownData {
+        val tagBreakdown = mutableMapOf<String, BigDecimal>()
+        expenses.forEach { expense ->
+            expense.tags.forEach { tag ->
+                tagBreakdown[tag] = tagBreakdown.getOrDefault(tag, BigDecimal.ZERO) + expense.amount
+            }
+        }
+        
+        val dailyBreakdown = expenses
+            .groupBy { it.date.toLocalDate() }
+            .map { (date, dayExpenses) ->
+                DailySpending(
+                    date = date,
+                    amount = dayExpenses.sumOf { it.amount },
+                    expenseCount = dayExpenses.size
+                )
+            }
+            .sortedBy { it.date }
+        
+        return CategoryDrillDownData(
+            categoryId = category.id,
+            categoryName = category.name,
+            expenses = expenses,
+            totalAmount = expenses.sumOf { it.amount },
+            tagBreakdown = tagBreakdown,
+            dailyBreakdown = dailyBreakdown
+        )
+    }
+
+    private fun extractAllTags(expenses: List<Expense>): List<String> {
+        return expenses
+            .flatMap { it.tags }
+            .distinct()
+            .sorted()
     }
 
     private fun processAnalyticsData(

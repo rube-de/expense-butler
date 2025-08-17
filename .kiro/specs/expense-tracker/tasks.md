@@ -92,7 +92,7 @@
     - Update expense list reactively when changes are made
     - _Requirements: 7.3, 7.4_
 
-- [-] 6. Build analytics and reporting features
+- [x] 6. Build analytics and reporting features
   - [x] 6.1 Create AnalyticsViewModel with data processing
     - Implement analytics data calculation methods
     - Create period comparison logic for month, quarter, year comparisons
@@ -107,7 +107,7 @@
     - Add period selector for month/quarter/year comparisons
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
 
-  - [ ] 6.3 Implement filtering and drill-down analytics
+  - [x] 6.3 Implement filtering and drill-down analytics
     - Add filter controls for date range, category, and tag selection
     - Implement chart interactivity with drill-down capabilities
     - Create summary cards showing totals, averages, and changes

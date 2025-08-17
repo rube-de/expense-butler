@@ -2,10 +2,15 @@ package com.expensetracker.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -24,14 +30,17 @@ import androidx.compose.runtime.collectAsState
 import com.expensetracker.data.model.TimePeriod
 import com.expensetracker.data.model.Category
 import com.expensetracker.data.model.MonthlySpending
-
+import com.expensetracker.ui.components.AnalyticsFilterDialog
+import com.expensetracker.ui.components.CategoryDrillDownView
+import java.io.File
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.*
 
 /**
- * Analytics screen displaying expense insights and charts.
+ * Analytics screen displaying expense insights and charts with filtering and drill-down capabilities.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
@@ -39,11 +48,27 @@ fun AnalyticsScreen(
     val analyticsData by viewModel.analyticsData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val currentFilter by viewModel.currentFilter.collectAsState()
+    val categoryDrillDownData by viewModel.categoryDrillDownData.collectAsState()
+    val availableCategories by viewModel.availableCategories.collectAsState()
+    val availableTags by viewModel.availableTags.collectAsState()
     
     var selectedPeriod by remember { mutableStateOf(TimePeriod.MONTH) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    var showExportSuccess by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     
     LaunchedEffect(selectedPeriod) {
         viewModel.loadAnalytics(selectedPeriod)
+    }
+    
+    // Show drill-down view if category is selected
+    categoryDrillDownData?.let { drillDown ->
+        CategoryDrillDownView(
+            drillDownData = drillDown,
+            onBack = { viewModel.closeDrillDown() }
+        )
+        return
     }
 
     Column(
@@ -51,11 +76,123 @@ fun AnalyticsScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Period Selector
-        PeriodSelector(
-            selectedPeriod = selectedPeriod,
-            onPeriodSelected = { selectedPeriod = it }
-        )
+        // Top Bar with Period Selector and Actions
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Period Selector
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                PeriodSelector(
+                    selectedPeriod = selectedPeriod,
+                    onPeriodSelected = { 
+                        selectedPeriod = it
+                        viewModel.loadAnalytics(it)
+                    }
+                )
+            }
+            
+            // Action Buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Filter Button
+                IconButton(onClick = { showFilterDialog = true }) {
+                    Badge(
+                        containerColor = if (currentFilter.selectedCategories.isNotEmpty() || 
+                                            currentFilter.selectedTags.isNotEmpty() || 
+                                            currentFilter.customDateRange != null) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            Color.Transparent
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Filter",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+                
+                // Export Button
+                IconButton(
+                    onClick = {
+                        val exportData = viewModel.exportAnalyticsData()
+                        // In a real app, you'd save this to a file or share it
+                        val file = File(context.cacheDir, "analytics_export.csv")
+                        file.writeText(exportData)
+                        showExportSuccess = true
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = "Export"
+                    )
+                }
+                
+                // Clear Filters Button (shown only when filters are active)
+                if (currentFilter.selectedCategories.isNotEmpty() || 
+                    currentFilter.selectedTags.isNotEmpty() || 
+                    currentFilter.customDateRange != null) {
+                    IconButton(onClick = { viewModel.clearFilters() }) {
+                        Icon(
+                            Icons.Default.Clear,
+                            contentDescription = "Clear filters"
+                        )
+                    }
+                }
+            }
+        }
+        
+        // Active Filters Display
+        if (currentFilter.selectedCategories.isNotEmpty() || 
+            currentFilter.selectedTags.isNotEmpty() || 
+            currentFilter.customDateRange != null) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    Text(
+                        text = "Active Filters",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    if (currentFilter.selectedCategories.isNotEmpty()) {
+                        Text(
+                            text = "Categories: ${currentFilter.selectedCategories.size} selected",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    
+                    if (currentFilter.selectedTags.isNotEmpty()) {
+                        Text(
+                            text = "Tags: ${currentFilter.selectedTags.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    
+                    currentFilter.customDateRange?.let { range ->
+                        Text(
+                            text = "Date: ${range.startDate} to ${range.endDate}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -110,9 +247,14 @@ fun AnalyticsScreen(
                     }
                     
                     item {
-                        // Category Breakdown Chart
+                        // Category Breakdown Chart with drill-down
                         if (analyticsData.categoryBreakdown.isNotEmpty()) {
-                            CategoryBreakdownChart(categoryBreakdown = analyticsData.categoryBreakdown)
+                            CategoryBreakdownChart(
+                                categoryBreakdown = analyticsData.categoryBreakdown,
+                                onCategoryClick = { category ->
+                                    viewModel.drillDownCategory(category.id)
+                                }
+                            )
                         }
                     }
                     
@@ -124,6 +266,40 @@ fun AnalyticsScreen(
                     }
                 }
             }
+        }
+    }
+    
+    // Filter Dialog
+    if (showFilterDialog) {
+        AnalyticsFilterDialog(
+            onDismiss = { showFilterDialog = false },
+            onApplyFilter = { categories, tags, dateRange ->
+                viewModel.applyFilters(categories, tags, dateRange)
+            },
+            availableCategories = availableCategories,
+            availableTags = availableTags,
+            currentSelectedCategories = currentFilter.selectedCategories,
+            currentSelectedTags = currentFilter.selectedTags,
+            currentDateRange = currentFilter.customDateRange
+        )
+    }
+    
+    // Export Success Snackbar
+    if (showExportSuccess) {
+        LaunchedEffect(showExportSuccess) {
+            kotlinx.coroutines.delay(3000)
+            showExportSuccess = false
+        }
+        
+        Snackbar(
+            modifier = Modifier.padding(16.dp),
+            action = {
+                TextButton(onClick = { showExportSuccess = false }) {
+                    Text("Dismiss")
+                }
+            }
+        ) {
+            Text("Analytics exported successfully")
         }
     }
 }
@@ -185,7 +361,8 @@ private fun TotalSpendingCard(totalSpending: BigDecimal) {
 
 @Composable
 private fun CategoryBreakdownChart(
-    categoryBreakdown: Map<Category, BigDecimal>
+    categoryBreakdown: Map<Category, BigDecimal>,
+    onCategoryClick: (Category) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -212,8 +389,11 @@ private fun CategoryBreakdownChart(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Legend
-                CategoryLegend(categoryBreakdown = categoryBreakdown)
+                // Legend with clickable items
+                CategoryLegend(
+                    categoryBreakdown = categoryBreakdown,
+                    onCategoryClick = onCategoryClick
+                )
             } else {
                 Box(
                     modifier = Modifier
@@ -306,7 +486,8 @@ private fun SimplePieChart(
 
 @Composable
 private fun CategoryLegend(
-    categoryBreakdown: Map<Category, BigDecimal>
+    categoryBreakdown: Map<Category, BigDecimal>,
+    onCategoryClick: (Category) -> Unit = {}
 ) {
     val total = categoryBreakdown.values.sumOf { it }
     
@@ -316,7 +497,10 @@ private fun CategoryLegend(
     ) {
         items(categoryBreakdown.toList()) { (category, amount) ->
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onCategoryClick(category) }
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
