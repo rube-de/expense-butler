@@ -364,13 +364,13 @@ class ExpenseRepositoryIntegrationTest {
 
         // Act & Assert - Total by category
         val totalByCategory = repository.getTotalAmountByCategory(categoryId)
-        assertEquals("Should calculate correct total by category", BigDecimal("70.50"), totalByCategory)
+        assertEquals("Should calculate correct total by category", 0, BigDecimal("70.50").compareTo(totalByCategory))
 
         // Act & Assert - Total by date range
         val startDate = LocalDate.of(2024, 1, 1)
         val endDate = LocalDate.of(2024, 1, 31)
         val totalByDateRange = repository.getTotalAmountByDateRange(startDate, endDate)
-        assertEquals("Should calculate correct total by date range", BigDecimal("55.50"), totalByDateRange)
+        assertEquals("Should calculate correct total by date range", 0, BigDecimal("55.50").compareTo(totalByDateRange))
 
         // Act & Assert - Expense count
         val expenseCount = repository.getExpenseCount()

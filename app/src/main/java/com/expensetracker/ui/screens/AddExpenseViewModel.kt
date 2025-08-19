@@ -44,8 +44,8 @@ class AddExpenseViewModel @Inject constructor(
     private fun loadInitialData() {
         viewModelScope.launch {
             try {
-                // Load categories
-                repository.getAllCategories().collect { categories ->
+                // Load categories - use collectLatest for ongoing updates
+                repository.getAllCategories().collectLatest { categories ->
                     _uiState.update { it.copy(availableCategories = categories) }
                 }
             } catch (e: Exception) {

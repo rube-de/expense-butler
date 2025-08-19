@@ -126,3 +126,5 @@ The agent will be triggered automatically when:
 
 ### Task Planning
 @.kiro/specs/expense-tracker/tasks.md
+## Best Practices
+- Use simple straigtforward approaches, don't over-engineer things

@@ -146,7 +146,9 @@ private fun AddExpenseContent(
                     label = { Text("Description") },
                     placeholder = { Text("What did you spend on?") },
                     isError = uiState.descriptionError != null,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("description_input"),
                     singleLine = true
                 )
                 

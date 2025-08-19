@@ -226,13 +226,16 @@ fun AnalyticsScreen(
             analyticsData.totalSpending == BigDecimal.ZERO && 
             analyticsData.categoryBreakdown.isEmpty() -> {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics { contentDescription = "Empty analytics state" },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "No expense data available",
                         style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.semantics { contentDescription = "No data message" }
                     )
                 }
             }
@@ -338,7 +341,9 @@ private fun PeriodSelector(
 @Composable
 private fun TotalSpendingCard(totalSpending: BigDecimal) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Total spending card" }
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -346,14 +351,16 @@ private fun TotalSpendingCard(totalSpending: BigDecimal) {
         ) {
             Text(
                 text = "Total Spending",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.semantics { contentDescription = "Total spending title" }
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = formatCurrency(totalSpending),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { contentDescription = "Total spending amount" }
             )
         }
     }
