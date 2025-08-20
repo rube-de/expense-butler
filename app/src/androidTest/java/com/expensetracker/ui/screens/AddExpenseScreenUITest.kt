@@ -60,33 +60,22 @@ class AddExpenseScreenUITest : IsolatedScreenTest() {
         composeTestRule.onNodeWithText("Save Expense").performClick()
         composeTestRule.waitForIdle()
         
-        // Wait for validation to run
-        Thread.sleep(500)
-        composeTestRule.waitForIdle()
-        
-        // Check for amount error with flexible matching
-        try {
-            composeTestRule.onNodeWithText("Amount is required", useUnmergedTree = true).assertExists()
-        } catch (e: AssertionError) {
-            // Try partial text match
-            composeTestRule.onNodeWithText("Amount", substring = true, useUnmergedTree = true).assertExists()
+        // Use proper waitUntil mechanism for all validation errors
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            try {
+                composeTestRule.onNodeWithText("Amount is required", useUnmergedTree = true).assertExists()
+                composeTestRule.onNodeWithText("Description is required", useUnmergedTree = true).assertExists()
+                composeTestRule.onNodeWithText("Please select a category", useUnmergedTree = true).assertExists()
+                true
+            } catch (e: AssertionError) {
+                false
+            }
         }
         
-        // Check for description error with flexible matching
-        try {
-            composeTestRule.onNodeWithText("Description is required", useUnmergedTree = true).assertExists()
-        } catch (e: AssertionError) {
-            // Try partial text match
-            composeTestRule.onNodeWithText("required", substring = true, useUnmergedTree = true).assertExists()
-        }
-        
-        // Check for category error with flexible matching
-        try {
-            composeTestRule.onNodeWithText("Please select a category", useUnmergedTree = true).assertExists()
-        } catch (e: AssertionError) {
-            // Try partial text match
-            composeTestRule.onNodeWithText("select a category", substring = true, useUnmergedTree = true).assertExists()
-        }
+        // Verify all validation errors are displayed
+        composeTestRule.onNodeWithText("Amount is required", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Description is required", useUnmergedTree = true).assertExists()
+        composeTestRule.onNodeWithText("Please select a category", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -99,23 +88,52 @@ class AddExpenseScreenUITest : IsolatedScreenTest() {
         composeTestRule.onNodeWithText("Save Expense").performClick()
         composeTestRule.waitForIdle()
         
-        // Give validation a moment to run
-        Thread.sleep(500)
-        composeTestRule.waitForIdle()
+        // Use proper waitUntil mechanism instead of Thread.sleep
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            try {
+                composeTestRule.onNodeWithText("Amount must be greater than 0", useUnmergedTree = true)
+                    .assertExists()
+                true
+            } catch (e: AssertionError) {
+                // Try using the test tag as fallback
+                try {
+                    composeTestRule.onNodeWithTag("amount_error_message").assertExists()
+                    true
+                } catch (e2: AssertionError) {
+                    false
+                }
+            }
+        }
         
-        // Check for validation error with more flexible matching
+        // Verify the error message is displayed (try both approaches)
         try {
             composeTestRule.onNodeWithText("Amount must be greater than 0", useUnmergedTree = true).assertExists()
         } catch (e: AssertionError) {
-            // Try partial text match in case of slightly different wording
-            composeTestRule.onNodeWithText("Amount must be greater", substring = true, useUnmergedTree = true).assertExists()
+            // Fallback to test tag
+            composeTestRule.onNodeWithTag("amount_error_message").assertExists()
         }
 
         // Clear and test valid amount
         amountField.performTextClearance()
         amountField.performTextInput("25.50")
         composeTestRule.waitForIdle()
-        // The error should disappear after entering valid amount
+        
+        // Wait for validation to clear the error
+        composeTestRule.waitUntil(timeoutMillis = 3000) {
+            try {
+                composeTestRule.onNodeWithText("Amount must be greater than 0", useUnmergedTree = true)
+                    .assertDoesNotExist()
+                true
+            } catch (e: AssertionError) {
+                // Try checking test tag doesn't exist
+                try {
+                    composeTestRule.onNodeWithTag("amount_error_message").assertDoesNotExist()
+                    true
+                } catch (e2: AssertionError) {
+                    false
+                }
+            }
+        }
     }
 
     @Test

@@ -109,7 +109,9 @@ fun AmountInput(
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = MaterialTheme.spacing.medium, top = MaterialTheme.spacing.extraSmall)
+                modifier = Modifier
+                    .padding(start = MaterialTheme.spacing.medium, top = MaterialTheme.spacing.extraSmall)
+                    .testTag("amount_error_message")
             )
         }
         
