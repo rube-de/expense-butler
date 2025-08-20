@@ -110,6 +110,9 @@ The agent will be triggered automatically when:
 ### Project Structure
 @.kiro/steering/structure.md
 
+### Code Quality Principles
+@.kiro/steering/coding-principles.md
+
 ### Test-Driven Development Guidelines
 @.kiro/steering/tdd.md
 

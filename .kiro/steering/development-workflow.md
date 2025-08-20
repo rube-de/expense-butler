@@ -24,6 +24,7 @@ This document outlines the development workflow for the Expense Tracker project,
 - [ ] Implement proper error handling
 - [ ] Follow Material Design 3 principles
 - [ ] Ensure accessibility compliance
+- [ ] Apply code quality principles (KISS, High Cohesion/Low Coupling, POLA) - See [Coding Principles](coding-principles.md)
 
 ### 4. Quality Assurance
 - [ ] Run unit tests: `./gradlew testDebugUnitTest`
@@ -216,6 +217,7 @@ fun `should handle async operations`() = runTest {
 
 ## Documentation References
 
+- **Coding Principles**: [coding-principles.md](coding-principles.md) - Code quality principles (KISS, High Cohesion/Low Coupling, POLA)
 - **TDD Guidelines**: [tdd.md](tdd.md) - Comprehensive TDD practices
 - **Technology Stack**: [tech.md](tech.md) - Tools and libraries
 - **Project Structure**: [structure.md](structure.md) - Code organization
