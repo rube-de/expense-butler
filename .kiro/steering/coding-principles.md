@@ -165,12 +165,129 @@ fun AddExpenseScreen() {
 - **Separate business logic** from UI logic
 - **Use meaningful file names** that reflect their single responsibility
 
+## Android-Specific Principles (Based on Review-Fixes Learnings)
+
+### ViewModel Best Practices
+
+**Event-Driven State Management**: Always use single event handler pattern to prevent race conditions.
+
+```kotlin
+// ✅ Good: Single event handler prevents race conditions
+@HiltViewModel
+class ExpenseViewModel @Inject constructor(
+    private val repository: ExpenseRepository
+) : ViewModel() {
+    
+    fun onUiEvent(event: ExpenseUiEvent) {
+        viewModelScope.launch {
+            when (event) {
+                is ExpenseUiEvent.AmountChanged -> updateAmount(event.amount)
+                is ExpenseUiEvent.SaveExpense -> saveExpense()
+            }
+        }
+    }
+}
+
+// ❌ Bad: Multiple launch blocks cause race conditions
+class ExpenseViewModel @Inject constructor(
+    private val repository: ExpenseRepository
+) : ViewModel() {
+    
+    fun updateAmount(amount: BigDecimal) {
+        viewModelScope.launch { /* state update */ }
+    }
+    
+    fun updateDescription(description: String) {
+        viewModelScope.launch { /* another state update */ }
+    }
+}
+```
+
+### Compose Performance Principles
+
+**Memoization First**: Always consider expensive calculations for memoization.
+
+```kotlin
+// ✅ Good: Memoized expensive calculations
+@Composable
+fun ExpenseChart(expenses: List<Expense>) {
+    val chartData by remember(expenses) {
+        derivedStateOf { calculateChartData(expenses) }
+    }
+    
+    val stableOnClick = remember { { expense: Expense -> /* handle click */ } }
+    
+    Chart(data = chartData, onClick = stableOnClick)
+}
+
+// ❌ Bad: Expensive calculations on every recomposition
+@Composable
+fun ExpenseChart(expenses: List<Expense>) {
+    val chartData = calculateChartData(expenses) // Calculated every time!
+    Chart(data = chartData, onClick = { expense -> /* unstable lambda */ })
+}
+```
+
+### Resource Management Principles
+
+**String Resources Always**: Never hardcode user-facing strings.
+
+```kotlin
+// ✅ Good: Externalized strings
+@Composable
+fun ErrorDisplay(error: UserFacingError) {
+    Text(
+        text = stringResource(
+            when (error) {
+                is UserFacingError.ValidationError -> R.string.error_validation
+                is UserFacingError.SaveFailed -> R.string.error_save_failed
+            }
+        )
+    )
+}
+
+// ❌ Bad: Hardcoded strings
+@Composable
+fun ErrorDisplay(error: UserFacingError) {
+    Text(text = "An error occurred") // Not localizable!
+}
+```
+
+### Preview Strategy Principles
+
+**Comprehensive Coverage**: Always create multiple preview states.
+
+```kotlin
+// ✅ Good: Multiple preview states
+@Preview(showBackground = true, name = "Empty State")
+@Composable
+private fun ExpenseFormPreview_Empty() { /* empty form */ }
+
+@Preview(showBackground = true, name = "Filled State")
+@Composable
+private fun ExpenseFormPreview_Filled() { /* filled form */ }
+
+@Preview(showBackground = true, name = "Error State")
+@Composable
+private fun ExpenseFormPreview_Errors() { /* validation errors */ }
+
+@Preview(showBackground = true, name = "Loading")
+@Composable
+private fun ExpenseFormPreview_Loading() { /* loading state */ }
+
+// ❌ Bad: Single preview state
+@Preview
+@Composable
+private fun ExpenseFormPreview() { /* only one state */ }
+```
+
 ## Enforcement and Code Reviews
 
 ### During Development
 - Apply these principles during the TDD Red-Green-Refactor cycle
 - Refactor code that violates these principles during the Refactor phase
 - Consider principle adherence when designing new features
+- **Reference [Android Best Practices](android-best-practices.md) for implementation patterns**
 
 ### Code Review Checklist
 - [ ] Is the solution as simple as possible?
@@ -178,12 +295,20 @@ fun AddExpenseScreen() {
 - [ ] Are dependencies minimal and well-defined (low coupling)?
 - [ ] Would the code behavior surprise a new developer (POLA)?
 - [ ] Is the file under 400 lines and focused on a single responsibility?
+- [ ] **Android Specific Checks (From Review-Fixes)**:
+  - [ ] ViewModel uses single event handler pattern?
+  - [ ] Compose components use memoization for expensive calculations?
+  - [ ] All user-facing strings use stringResource()?
+  - [ ] Multiple preview states implemented?
+  - [ ] No race conditions in state management?
+  - [ ] Validation logic centralized in dedicated classes?
 
 ### Continuous Improvement
 - Regularly review and refactor code that violates these principles
 - Update principles based on project experience and team feedback
 - Use these principles to guide architectural decisions
 - Include principle adherence in definition of done for features
+- **Apply lessons from review-fixes.md to prevent regression**
 
 ## Integration with Project Workflow
 

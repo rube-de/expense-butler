@@ -23,6 +23,8 @@ import com.expensetracker.ui.components.ExpenseCard
 import com.expensetracker.ui.components.SearchBar
 import com.expensetracker.ui.theme.ExpenseTrackerTheme
 import com.expensetracker.ui.theme.spacing
+import com.expensetracker.ui.util.LogCompositions
+import com.expensetracker.ui.util.stableCallback
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -35,6 +37,8 @@ fun ExpenseListScreen(
     modifier: Modifier = Modifier,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
+    LogCompositions("ExpenseListScreen")
+    
     val uiState by viewModel.uiState.collectAsState()
     
     // Handle error messages
@@ -107,6 +111,8 @@ fun ExpenseListContent(
     onToggleFilters: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    LogCompositions("ExpenseListContent")
+    
     Column(
         modifier = modifier.padding(MaterialTheme.spacing.medium)
     ) {
@@ -251,6 +257,18 @@ private fun ExpenseList(
     onDeleteExpense: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    LogCompositions("ExpenseList")
+    
+    // Optimize category lookups by creating a map once
+    val categoryMap by remember(categories) {
+        derivedStateOf { categories.associateBy { it.id } }
+    }
+    
+    // Create stable callback to prevent unnecessary recompositions
+    val stableOnExpenseClick = stableCallback(onExpenseClick) { expense: Expense ->
+        onExpenseClick(expense)
+    }
+    
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)
@@ -259,15 +277,26 @@ private fun ExpenseList(
             items = expenses,
             key = { expense -> expense.id }
         ) { expense ->
-            val category = categories.find { it.id == expense.categoryId }
-            
-            ExpenseCard(
+            ExpenseListItem(
                 expense = expense,
-                category = category,
-                onExpenseClick = onExpenseClick
+                category = categoryMap[expense.categoryId],
+                onExpenseClick = stableOnExpenseClick
             )
         }
     }
+}
+
+@Composable
+private fun ExpenseListItem(
+    expense: Expense,
+    category: Category?,
+    onExpenseClick: (Expense) -> Unit
+) {
+    ExpenseCard(
+        expense = expense,
+        category = category,
+        onExpenseClick = onExpenseClick
+    )
 }
 
 @Composable

@@ -46,6 +46,13 @@ class ExpenseRepositoryImpl @Inject constructor(
             }
         }
 
+    override fun getExpensesByRecurringExpenseId(recurringExpenseId: Long): Flow<List<Expense>> =
+        expenseDao.getAllExpenses().map { expenses ->
+            expenses.filter { expense ->
+                expense.recurringExpenseId == recurringExpenseId
+            }
+        }
+
     override fun searchExpenses(searchText: String): Flow<List<Expense>> =
         expenseDao.searchExpensesByDescription(searchText)
 

@@ -83,6 +83,17 @@ class FakeExpenseRepository : ExpenseRepository {
         }
     }
     
+    override fun getExpensesByRecurringExpenseId(recurringExpenseId: Long): Flow<List<Expense>> {
+        if (shouldThrowError) {
+            return flow { throw Exception(errorMessage) }
+        }
+        return expensesFlow.map { expenses ->
+            expenses.filter { expense ->
+                expense.recurringExpenseId == recurringExpenseId
+            }
+        }
+    }
+    
     override fun searchExpenses(searchText: String): Flow<List<Expense>> {
         return expensesFlow.map { expenses ->
             expenses.filter { expense ->

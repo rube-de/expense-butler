@@ -20,6 +20,7 @@ interface ExpenseRepository {
     fun getExpensesByDateRange(startDate: LocalDate, endDate: LocalDate): Flow<List<Expense>>
     fun getExpensesByCategory(categoryId: Long): Flow<List<Expense>>
     fun getExpensesByTags(tags: List<String>): Flow<List<Expense>>
+    fun getExpensesByRecurringExpenseId(recurringExpenseId: Long): Flow<List<Expense>>
     fun searchExpenses(searchText: String): Flow<List<Expense>>
     fun getFilteredExpenses(
         categoryId: Long? = null,

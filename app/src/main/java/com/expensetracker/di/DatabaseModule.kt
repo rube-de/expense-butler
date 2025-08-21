@@ -1,11 +1,13 @@
 package com.expensetracker.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.expensetracker.data.dao.CategoryDao
 import com.expensetracker.data.dao.ExpenseDao
 import com.expensetracker.data.dao.RecurringExpenseDao
 import com.expensetracker.data.database.AppDatabase
+import com.expensetracker.data.database.DatabaseMigrations
 import com.expensetracker.data.repository.ExpenseRepository
 import com.expensetracker.data.repository.ExpenseRepositoryImpl
 import dagger.Binds
@@ -28,7 +30,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "expense_tracker_database"
         )
-        .fallbackToDestructiveMigration() // For development - remove in production
+        .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
         .build()
     }
 
@@ -45,6 +47,12 @@ object DatabaseModule {
     @Provides
     fun provideRecurringExpenseDao(database: AppDatabase): RecurringExpenseDao {
         return database.recurringExpenseDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences("expense_tracker_prefs", Context.MODE_PRIVATE)
     }
 }
 

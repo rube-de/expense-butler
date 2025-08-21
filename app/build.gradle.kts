@@ -54,6 +54,11 @@ android {
             excludes += "/META-INF/LICENSE-notice.md"
         }
     }
+    
+    // Enable per-app language preferences (manual configuration)
+    // androidResources {
+    //     generateLocaleConfig = true
+    // }
     testOptions {
         unitTests.all {
             // Support both JUnit 4 and JUnit 5 tests
@@ -62,6 +67,12 @@ android {
                 includeEngines("junit-vintage", "junit-jupiter")
             }
         }
+    }
+}
+
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
     }
 }
 

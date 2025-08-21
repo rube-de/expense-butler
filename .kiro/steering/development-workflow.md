@@ -11,6 +11,40 @@ This document outlines the development workflow for the Expense Tracker project,
 - [ ] Review related requirements in `requirements.md`
 - [ ] Check design specifications in `design.md`
 - [ ] Identify dependencies and prerequisites
+- [ ] **CRITICAL**: Review [Android Best Practices](android-best-practices.md) for applicable patterns
+
+### 1.5 Pre-Implementation Review (Based on Review-Fixes Learnings)
+Before writing any code, ensure you understand these critical patterns:
+
+#### Database Considerations
+- [ ] Will this feature require database changes?
+- [ ] If yes, plan Room migration strategy (never use fallbackToDestructiveMigration)
+- [ ] Consider performance indices for new queries
+
+#### State Management Architecture  
+- [ ] Will this feature have complex UI state?
+- [ ] If yes, design sealed class events before implementation
+- [ ] Plan single event handler pattern for ViewModel
+
+#### Validation Requirements
+- [ ] What inputs need validation?
+- [ ] Plan dedicated validator classes (don't inline validation logic)
+- [ ] Consider edge cases and boundary conditions
+
+#### Performance Impact
+- [ ] Will this feature have expensive calculations?
+- [ ] Plan memoization strategy for Compose components
+- [ ] Consider recomposition optimization needs
+
+#### Internationalization
+- [ ] What user-facing strings will be needed?
+- [ ] Plan string resource categories and organization
+- [ ] Consider error message localization
+
+#### Navigation Requirements
+- [ ] Does this feature need deep linking?
+- [ ] Plan navigation arguments and routes
+- [ ] Consider back stack management
 
 ### 2. Test-First Development (TDD)
 - [ ] **RED**: Write failing tests that define expected behavior
@@ -25,12 +59,23 @@ This document outlines the development workflow for the Expense Tracker project,
 - [ ] Follow Material Design 3 principles
 - [ ] Ensure accessibility compliance
 - [ ] Apply code quality principles (KISS, High Cohesion/Low Coupling, POLA) - See [Coding Principles](coding-principles.md)
+- [ ] **CRITICAL**: Review [Android Best Practices](android-best-practices.md) checklist before starting
+- [ ] **Database**: Plan migration strategy, never use fallbackToDestructiveMigration
+- [ ] **State Management**: Use event-driven architecture with sealed class events
+- [ ] **Validation**: Create dedicated validator classes, never inline validation
+- [ ] **Performance**: Apply memoization and stable callbacks from start
+- [ ] **I18n**: Use string resources throughout, no hardcoded strings
 
 ### 4. Quality Assurance
 - [ ] Run unit tests: `./gradlew testDebugUnitTest`
 - [ ] Run integration tests: `./gradlew connectedAndroidTest`
 - [ ] Verify build: `./gradlew assembleDebug`
-- [ ] Check code coverage meets requirements (80%+)
+- [ ] Check code coverage meets requirements (80%+ overall, 95%+ for business logic)
+- [ ] **Performance**: Verify no unnecessary recompositions with LogCompositions
+- [ ] **Memory**: Check for lifecycle-aware component usage
+- [ ] **Validation**: Ensure all validators have comprehensive test coverage
+- [ ] **Navigation**: Test deep linking functionality
+- [ ] **I18n**: Verify all user-facing strings use stringResource()
 
 ### 5. Task Completion
 - [ ] Update task status to completed
@@ -94,13 +139,19 @@ This document outlines the development workflow for the Expense Tracker project,
 - [ ] Test names are descriptive and use backticks
 - [ ] Edge cases and error conditions tested
 - [ ] No implementation details tested (test behavior, not internals)
+- [ ] **ViewModels**: Minimum 40+ test cases for complex ViewModels
+- [ ] **Validators**: 100+ test cases covering all edge cases
 
-### Code Quality
+### Code Quality (Based on Review-Fixes Learnings)
 - [ ] Follows project architecture patterns
 - [ ] Proper error handling implemented
 - [ ] Dependencies injected correctly
 - [ ] Code is readable and well-documented
 - [ ] No hardcoded values or magic numbers
+- [ ] **State Management**: Single event handler pattern used
+- [ ] **Validation**: Dedicated validator classes, no inline validation
+- [ ] **Memory**: No commented lifecycle code or memory leaks
+- [ ] **Performance**: Memoization applied where needed
 
 ### Android Specific
 - [ ] Compose components follow Material Design 3
@@ -108,6 +159,19 @@ This document outlines the development workflow for the Expense Tracker project,
 - [ ] Accessibility content descriptions provided
 - [ ] Resources externalized (strings, dimensions, colors)
 - [ ] Performance considerations addressed
+- [ ] **Database**: Proper migrations, no destructive fallback
+- [ ] **Navigation**: Deep linking implemented for primary screens
+- [ ] **I18n**: All user-facing strings use stringResource()
+- [ ] **Previews**: Multiple preview states implemented (empty, filled, error, loading)
+
+### Critical Review Items (Learned from review-fixes.md)
+- [ ] **Race Conditions**: No multiple coroutine launches in ViewModels
+- [ ] **State Updates**: All state changes go through single event handler
+- [ ] **Validation Architecture**: Centralized validators with dependency injection
+- [ ] **Error Handling**: Type-safe error classes with user-facing messages
+- [ ] **Performance Monitoring**: LogCompositions added during development
+- [ ] **String Resources**: Organized by category, no hardcoded strings
+- [ ] **Memory Management**: Proper lifecycle-aware component usage
 
 ## Testing Strategy by Component Type
 

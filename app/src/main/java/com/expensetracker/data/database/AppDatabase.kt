@@ -17,8 +17,8 @@ import com.expensetracker.data.model.RecurringExpense
 
 @Database(
     entities = [Expense::class, Category::class, RecurringExpense::class],
-    version = 1,
-    exportSchema = false
+    version = 2,
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -31,13 +31,6 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
         
-        // Future migrations will be added here
-        // val MIGRATION_1_2 = object : Migration(1, 2) {
-        //     override fun migrate(database: SupportSQLiteDatabase) {
-        //         // Migration logic here
-        //     }
-        // }
-        
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -45,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "expense_tracker_database"
                 )
-                // .addMigrations(MIGRATION_1_2) // Add migrations as needed
+                .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
                 .build()
                 INSTANCE = instance
                 instance

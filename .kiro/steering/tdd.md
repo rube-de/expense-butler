@@ -314,10 +314,14 @@ fun `should persist expense and return success`() {
 ./gradlew testDebugUnitTest --tests "ExpenseRepositoryTest"
 ```
 
-### Coverage Requirements
-- **Minimum coverage**: 80% for new code
-- **Critical paths**: 95% coverage required
+### Coverage Requirements (Enhanced from Review-Fixes Learnings)
+- **Minimum coverage**: 80% for new code overall
+- **Critical paths**: 95% coverage required for business logic
 - **UI components**: Focus on business logic, not visual rendering
+- **ViewModel Testing**: Minimum 40+ test cases for complex ViewModels
+- **Validation Testing**: 100+ test cases covering all edge cases and boundaries
+- **Production Readiness**: 300+ total tests for production deployment
+- **Race Condition Testing**: Test concurrent state updates and event handling
 
 ## TDD Workflow Integration
 
@@ -328,13 +332,175 @@ fun `should persist expense and return success`() {
 4. ✅ Refactor and improve code quality
 5. ✅ Ensure all tests pass before committing
 
-### Code Review Checklist
+### Code Review Checklist (Enhanced with Review-Fixes Requirements)
 - [ ] Tests written before implementation
 - [ ] All tests pass
 - [ ] Edge cases covered
 - [ ] Mocks used appropriately
 - [ ] Test names are descriptive
 - [ ] No implementation details tested
+- [ ] **ViewModel Coverage**: Complex ViewModels have 40+ test cases
+- [ ] **Validation Coverage**: All validators have comprehensive test suites
+- [ ] **Race Condition Coverage**: State management tested for concurrency issues
+- [ ] **Event Handling**: All UI events tested with proper state verification
+- [ ] **Error Scenarios**: Both success and failure paths tested thoroughly
+
+## Comprehensive Testing Patterns (From Review-Fixes Success)
+
+### ViewModel Testing Requirements
+
+Based on the successful AddExpenseViewModel implementation with 43 test cases:
+
+```kotlin
+@OptIn(ExperimentalCoroutinesApi::class)
+class AddExpenseViewModelTest {
+
+    @get:Rule
+    val coroutineTestRule = CoroutineTestRule()
+
+    private lateinit var mockRepository: ExpenseRepository
+    private lateinit var viewModel: AddExpenseViewModel
+
+    @Before
+    fun setup() {
+        mockRepository = mockk(relaxed = true)
+        viewModel = AddExpenseViewModel(
+            repository = mockRepository,
+            amountValidator = AmountValidator(),
+            descriptionValidator = DescriptionValidator(),
+            categoryValidator = CategoryValidator(),
+            tagValidator = TagValidator()
+        )
+    }
+
+    // Organize tests with nested classes for clarity
+    @Nested
+    inner class AmountHandling {
+        @Test
+        fun `should update amount when valid amount provided`() = runTest {
+            viewModel.onUiEvent(AddExpenseUiEvent.AmountChanged(BigDecimal("25.50")))
+            assertEquals(BigDecimal("25.50"), viewModel.uiState.value.amount)
+        }
+        
+        @Test
+        fun `should clear amount error when new amount provided`() = runTest {
+            // Test error clearing behavior
+        }
+    }
+
+    @Nested
+    inner class StateManagement {
+        @Test
+        fun `should handle concurrent events without race conditions`() = runTest {
+            // Test multiple simultaneous events
+        }
+    }
+
+    @Nested
+    inner class ValidationIntegration {
+        @Test
+        fun `should validate all fields before saving`() = runTest {
+            // Test comprehensive validation
+        }
+    }
+}
+```
+
+**Requirements for ViewModel Testing**:
+- Minimum 40+ test cases for complex ViewModels
+- Use nested test classes for organization
+- Test all UI event handling paths
+- Test both success and failure scenarios
+- Test race conditions and concurrent state updates
+- Mock all external dependencies
+- Use `runTest` for coroutine testing
+
+### Validation Testing Requirements
+
+Based on the comprehensive validator testing with 100+ test cases:
+
+```kotlin
+class AmountValidatorTest {
+
+    private val validator = AmountValidator()
+
+    @Nested
+    inner class ValidateMethod {
+        @Test
+        fun `should return Valid for positive amount`() {
+            val result = validator.validate(BigDecimal("25.50"))
+            assertEquals(ValidationResult.Valid, result)
+        }
+        
+        @Test
+        fun `should return Invalid for null amount`() {
+            val result = validator.validate(null)
+            assertTrue(result is ValidationResult.Invalid)
+        }
+        
+        @Test
+        fun `should return Invalid for zero amount`() {
+            val result = validator.validate(BigDecimal.ZERO)
+            assertTrue(result is ValidationResult.Invalid)
+        }
+        
+        @Test
+        fun `should return Invalid for negative amount`() {
+            val result = validator.validate(BigDecimal("-10.00"))
+            assertTrue(result is ValidationResult.Invalid)
+        }
+        
+        @Test
+        fun `should return Invalid for amount exceeding maximum`() {
+            val result = validator.validate(BigDecimal("1000000000.00"))
+            assertTrue(result is ValidationResult.Invalid)
+        }
+    }
+
+    @Nested
+    inner class FilterAmountInputMethod {
+        @Test
+        fun `should filter out non-numeric characters`() {
+            val result = validator.filterAmountInput("abc123.45def")
+            assertEquals("123.45", result)
+        }
+    }
+}
+```
+
+**Requirements for Validation Testing**:
+- Test all boundary conditions (null, zero, negative, maximum)
+- Test input filtering and sanitization
+- Test error message generation
+- Use nested classes for method grouping
+- Achieve 100% coverage for validation logic
+
+### Integration Testing Requirements
+
+Based on successful repository testing:
+
+```kotlin
+@Test
+fun `should persist expense and update state reactively`() = runTest {
+    // Arrange
+    val expense = createTestExpense()
+    
+    // Act
+    repository.saveExpense(expense)
+    
+    // Assert
+    repository.getAllExpenses().test {
+        val expenses = awaitItem()
+        assertTrue(expenses.contains(expense))
+    }
+}
+```
+
+**Requirements for Integration Testing**:
+- Test database operations with in-memory Room database
+- Test reactive data flows with Turbine
+- Test data transformations and mapping
+- Test error handling at integration boundaries
 
 ## Examples from Current Project
 

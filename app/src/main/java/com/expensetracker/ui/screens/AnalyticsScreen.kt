@@ -32,6 +32,8 @@ import com.expensetracker.data.model.Category
 import com.expensetracker.data.model.MonthlySpending
 import com.expensetracker.ui.components.AnalyticsFilterDialog
 import com.expensetracker.ui.components.CategoryDrillDownView
+import com.expensetracker.ui.util.LogCompositions
+import com.expensetracker.ui.util.stableCallback
 import java.io.File
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -45,6 +47,8 @@ import java.util.*
 fun AnalyticsScreen(
     viewModel: AnalyticsViewModel = hiltViewModel()
 ) {
+    LogCompositions("AnalyticsScreen")
+    
     val analyticsData by viewModel.analyticsData.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -252,11 +256,14 @@ fun AnalyticsScreen(
                     item {
                         // Category Breakdown Chart with drill-down
                         if (analyticsData.categoryBreakdown.isNotEmpty()) {
+                            // Create stable callback to prevent unnecessary recompositions
+                            val onCategoryClick = stableCallback(viewModel) { category: Category ->
+                                viewModel.drillDownCategory(category.id)
+                            }
+                            
                             CategoryBreakdownChart(
                                 categoryBreakdown = analyticsData.categoryBreakdown,
-                                onCategoryClick = { category ->
-                                    viewModel.drillDownCategory(category.id)
-                                }
+                                onCategoryClick = onCategoryClick
                             )
                         }
                     }
@@ -340,6 +347,13 @@ private fun PeriodSelector(
 
 @Composable
 private fun TotalSpendingCard(totalSpending: BigDecimal) {
+    LogCompositions("TotalSpendingCard")
+    
+    // Memoize expensive currency formatting
+    val formattedAmount by remember(totalSpending) {
+        derivedStateOf { formatCurrency(totalSpending) }
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -356,7 +370,7 @@ private fun TotalSpendingCard(totalSpending: BigDecimal) {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = formatCurrency(totalSpending),
+                text = formattedAmount,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -460,94 +474,163 @@ private fun MonthlyTrendsChart(
     }
 }
 
+// Optimized data structure for pie chart calculations
+@Stable
+private data class PieChartSegment(
+    val color: Color,
+    val startAngle: Float,
+    val sweepAngle: Float
+)
+
 @Composable
 private fun SimplePieChart(
     data: Map<Category, BigDecimal>,
     modifier: Modifier = Modifier
 ) {
-    val total = data.values.sumOf { it }
-    if (total == BigDecimal.ZERO) return
+    LogCompositions("SimplePieChart")
+    
+    // Memoize expensive pie chart calculations
+    val chartSegments by remember(data) {
+        derivedStateOf {
+            val total = data.values.sumOf { it }
+            if (total == BigDecimal.ZERO) {
+                emptyList<PieChartSegment>()
+            } else {
+                var currentAngle = 0f
+                data.map { (category, amount) ->
+                    val sweepAngle = (amount.toFloat() / total.toFloat()) * 360f
+                    val segment = PieChartSegment(
+                        color = Color(android.graphics.Color.parseColor(category.color)),
+                        startAngle = currentAngle,
+                        sweepAngle = sweepAngle
+                    )
+                    currentAngle += sweepAngle
+                    segment
+                }
+            }
+        }
+    }
+    
+    if (chartSegments.isEmpty()) return
     
     Canvas(modifier = modifier) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val radius = minOf(size.width, size.height) / 2f * 0.8f
         
-        var startAngle = 0f
-        
-        data.forEach { (category, amount) ->
-            val sweepAngle = (amount.toFloat() / total.toFloat()) * 360f
-            
+        chartSegments.forEach { segment ->
             drawArc(
-                color = Color(android.graphics.Color.parseColor(category.color)),
-                startAngle = startAngle,
-                sweepAngle = sweepAngle,
+                color = segment.color,
+                startAngle = segment.startAngle,
+                sweepAngle = segment.sweepAngle,
                 useCenter = true,
                 topLeft = Offset(center.x - radius, center.y - radius),
                 size = Size(radius * 2, radius * 2)
             )
-            
-            startAngle += sweepAngle
         }
     }
 }
+
+// Optimized data structure for category legend
+@Stable
+private data class CategoryLegendItem(
+    val category: Category,
+    val amount: BigDecimal,
+    val formattedAmount: String,
+    val percentage: String,
+    val color: Color
+)
 
 @Composable
 private fun CategoryLegend(
     categoryBreakdown: Map<Category, BigDecimal>,
     onCategoryClick: (Category) -> Unit = {}
 ) {
-    val total = categoryBreakdown.values.sumOf { it }
+    LogCompositions("CategoryLegend")
+    
+    // Memoize legend calculations and formatting
+    val legendItems by remember(categoryBreakdown) {
+        derivedStateOf {
+            val total = categoryBreakdown.values.sumOf { it }
+            categoryBreakdown.map { (category, amount) ->
+                val percentage = if (total > BigDecimal.ZERO) {
+                    "${(amount.toDouble() / total.toDouble() * 100).toInt()}%"
+                } else {
+                    "0%"
+                }
+                CategoryLegendItem(
+                    category = category,
+                    amount = amount,
+                    formattedAmount = formatCurrency(amount),
+                    percentage = percentage,
+                    color = Color(android.graphics.Color.parseColor(category.color))
+                )
+            }
+        }
+    }
+    
+    // Create stable callback to prevent recompositions
+    val stableOnCategoryClick = stableCallback(onCategoryClick) { category: Category ->
+        onCategoryClick(category)
+    }
     
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.heightIn(max = 120.dp)
     ) {
-        items(categoryBreakdown.toList()) { (category, amount) ->
-            Row(
+        items(
+            items = legendItems,
+            key = { it.category.id }
+        ) { item ->
+            CategoryLegendRow(
+                item = item,
+                onClick = { stableOnCategoryClick(item.category) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryLegendRow(
+    item: CategoryLegendItem,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onCategoryClick(category) }
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(12.dp)
-                            .background(
-                                Color(android.graphics.Color.parseColor(category.color)),
-                                CircleShape
-                            )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = category.name,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
-                    Text(
-                        text = formatCurrency(amount),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                    if (total > BigDecimal.ZERO) {
-                        val percentage = (amount.toDouble() / total.toDouble() * 100)
-                        Text(
-                            text = "${percentage.toInt()}%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
+                    .size(12.dp)
+                    .background(item.color, CircleShape)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = item.category.name,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        
+        Column(
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = item.formattedAmount,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = item.percentage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

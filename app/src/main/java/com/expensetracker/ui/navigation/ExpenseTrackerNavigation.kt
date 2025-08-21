@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import androidx.navigation.NavType
 import com.expensetracker.R
 import com.expensetracker.ui.screens.AddExpenseScreen
@@ -138,7 +139,8 @@ fun ExpenseTrackerNavHost(
         
         composable(
             route = Screen.EditExpense.route,
-            arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
+            arguments = listOf(navArgument("expenseId") { type = NavType.LongType }),
+            deepLinks = listOf(navDeepLink { uriPattern = "expensetracker://edit/{expenseId}" })
         ) {
             EditExpenseScreen(
                 onNavigateBack = { navController.popBackStack() },

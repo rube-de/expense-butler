@@ -10,14 +10,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import android.content.res.Configuration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.expensetracker.R
 import com.expensetracker.data.model.Category
+import com.expensetracker.domain.error.UserFacingError
 import com.expensetracker.ui.components.*
 import com.expensetracker.ui.theme.ExpenseTrackerTheme
 import com.expensetracker.ui.theme.spacing
+import com.expensetracker.ui.util.toDisplayString
 import java.math.BigDecimal
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,8 +43,8 @@ fun AddExpenseScreen(
     }
 
     // Show error snackbar
-    uiState.errorMessage?.let { errorMessage ->
-        LaunchedEffect(errorMessage) {
+    uiState.errorMessage?.let { userFacingError ->
+        LaunchedEffect(userFacingError) {
             // In a real app, you might want to show a Snackbar here
             // For now, we'll just clear the error after showing it
             viewModel.clearError()
@@ -51,7 +56,7 @@ fun AddExpenseScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Add Expense",
+                        stringResource(R.string.title_add_expense),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Medium
                     )
@@ -60,7 +65,7 @@ fun AddExpenseScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Navigate back"
+                            contentDescription = stringResource(R.string.cd_navigate_back)
                         )
                     }
                 }
@@ -109,7 +114,7 @@ private fun AddExpenseContent(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
                 Text(
-                    text = "Amount",
+                    text = stringResource(R.string.label_amount),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -135,7 +140,7 @@ private fun AddExpenseContent(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
                 Text(
-                    text = "Description",
+                    text = stringResource(R.string.label_description),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -143,8 +148,8 @@ private fun AddExpenseContent(
                 OutlinedTextField(
                     value = uiState.description,
                     onValueChange = onDescriptionChanged,
-                    label = { Text("Description") },
-                    placeholder = { Text("What did you spend on?") },
+                    label = { Text(stringResource(R.string.label_description)) },
+                    placeholder = { Text(stringResource(R.string.placeholder_description)) },
                     isError = uiState.descriptionError != null,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -173,7 +178,7 @@ private fun AddExpenseContent(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
                 Text(
-                    text = "Category",
+                    text = stringResource(R.string.label_category),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -186,7 +191,7 @@ private fun AddExpenseContent(
                     )
                 } else {
                     Text(
-                        text = "Loading categories...",
+                        text = stringResource(R.string.loading_categories),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -213,7 +218,7 @@ private fun AddExpenseContent(
                 verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium)
             ) {
                 Text(
-                    text = "Tags",
+                    text = stringResource(R.string.label_tags),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Medium
                 )
@@ -222,7 +227,7 @@ private fun AddExpenseContent(
                     selectedTags = uiState.selectedTags,
                     availableTags = uiState.availableTags,
                     onTagsChanged = onTagsChanged,
-                    placeholder = "Add tags to organize your expenses..."
+                    placeholder = stringResource(R.string.placeholder_tags_organize)
                 )
             }
         }
@@ -241,10 +246,10 @@ private fun AddExpenseContent(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.width(MaterialTheme.spacing.small))
-                Text("Saving...")
+                Text(stringResource(R.string.status_saving))
             } else {
                 Text(
-                    "Save Expense",
+                    stringResource(R.string.button_save),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -259,7 +264,7 @@ private fun AddExpenseContent(
                 )
             ) {
                 Text(
-                    text = uiState.errorMessage,
+                    text = uiState.errorMessage.toDisplayString(),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(MaterialTheme.spacing.medium)
@@ -308,17 +313,20 @@ private fun CategoryGrid(
     }
 }
 
-@Preview(showBackground = true)
+// Sample data for previews
+private val sampleCategories = listOf(
+    Category(1, "Food", "#4CAF50", "restaurant", true),
+    Category(2, "Travel", "#2196F3", "flight", true),
+    Category(3, "Entertainment", "#FF9800", "movie", true),
+    Category(4, "Shopping", "#9C27B0", "shopping_cart", true)
+)
+
+private val sampleTags = listOf("coffee", "work", "breakfast", "lunch", "meeting", "personal")
+
+@Preview(showBackground = true, name = "Filled Form")
 @Composable
-private fun AddExpenseScreenPreview() {
+private fun AddExpenseScreenPreview_FilledForm() {
     ExpenseTrackerTheme {
-        val sampleCategories = listOf(
-            Category(1, "Food", "#4CAF50", "restaurant", true),
-            Category(2, "Travel", "#2196F3", "flight", true),
-            Category(3, "Entertainment", "#FF9800", "movie", true),
-            Category(4, "Shopping", "#9C27B0", "shopping_cart", true)
-        )
-        
         AddExpenseContent(
             uiState = AddExpenseUiState(
                 amount = BigDecimal("25.50"),
@@ -326,7 +334,131 @@ private fun AddExpenseScreenPreview() {
                 availableCategories = sampleCategories,
                 selectedCategory = sampleCategories[0],
                 selectedTags = listOf("coffee", "work"),
-                availableTags = listOf("coffee", "work", "breakfast", "lunch")
+                availableTags = sampleTags
+            ),
+            onAmountChanged = { },
+            onCurrencyChanged = { },
+            onDescriptionChanged = { },
+            onCategorySelected = { },
+            onTagsChanged = { },
+            onSaveExpense = { }
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Empty Form")
+@Composable
+private fun AddExpenseScreenPreview_Empty() {
+    ExpenseTrackerTheme {
+        AddExpenseContent(
+            uiState = AddExpenseUiState(
+                amount = null,
+                description = "",
+                availableCategories = sampleCategories,
+                selectedCategory = null,
+                selectedTags = emptyList(),
+                availableTags = sampleTags
+            ),
+            onAmountChanged = { },
+            onCurrencyChanged = { },
+            onDescriptionChanged = { },
+            onCategorySelected = { },
+            onTagsChanged = { },
+            onSaveExpense = { }
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Validation Errors")
+@Composable
+private fun AddExpenseScreenPreview_ValidationErrors() {
+    ExpenseTrackerTheme {
+        AddExpenseContent(
+            uiState = AddExpenseUiState(
+                amount = BigDecimal.ZERO,
+                description = "",
+                availableCategories = sampleCategories,
+                selectedCategory = null,
+                selectedTags = emptyList(),
+                availableTags = sampleTags,
+                amountError = "Amount must be greater than 0",
+                descriptionError = "Description is required",
+                categoryError = "Please select a category"
+            ),
+            onAmountChanged = { },
+            onCurrencyChanged = { },
+            onDescriptionChanged = { },
+            onCategorySelected = { },
+            onTagsChanged = { },
+            onSaveExpense = { }
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Loading")
+@Composable
+private fun AddExpenseScreenPreview_Loading() {
+    ExpenseTrackerTheme {
+        AddExpenseContent(
+            uiState = AddExpenseUiState(
+                amount = BigDecimal("150.00"),
+                description = "Team lunch",
+                availableCategories = sampleCategories,
+                selectedCategory = sampleCategories[0],
+                selectedTags = listOf("work", "lunch"),
+                availableTags = sampleTags,
+                isLoading = true
+            ),
+            onAmountChanged = { },
+            onCurrencyChanged = { },
+            onDescriptionChanged = { },
+            onCategorySelected = { },
+            onTagsChanged = { },
+            onSaveExpense = { }
+        )
+    }
+}
+
+@Preview(
+    showBackground = true, 
+    name = "Dark Theme",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+private fun AddExpenseScreenPreview_Dark() {
+    ExpenseTrackerTheme {
+        AddExpenseContent(
+            uiState = AddExpenseUiState(
+                amount = BigDecimal("75.25"),
+                description = "Movie tickets",
+                availableCategories = sampleCategories,
+                selectedCategory = sampleCategories[2], // Entertainment
+                selectedTags = listOf("entertainment", "personal"),
+                availableTags = sampleTags
+            ),
+            onAmountChanged = { },
+            onCurrencyChanged = { },
+            onDescriptionChanged = { },
+            onCategorySelected = { },
+            onTagsChanged = { },
+            onSaveExpense = { }
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Error State")
+@Composable
+private fun AddExpenseScreenPreview_ErrorState() {
+    ExpenseTrackerTheme {
+        AddExpenseContent(
+            uiState = AddExpenseUiState(
+                amount = BigDecimal("25.50"),
+                description = "Coffee",
+                availableCategories = sampleCategories,
+                selectedCategory = sampleCategories[0],
+                selectedTags = listOf("coffee", "work"),
+                availableTags = sampleTags,
+                errorMessage = UserFacingError.SaveFailed
             ),
             onAmountChanged = { },
             onCurrencyChanged = { },

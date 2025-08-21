@@ -23,6 +23,38 @@
 - **Kotlinx Serialization**: 1.6.2 (JSON serialization)
 - **Vico**: 1.13.1 (charts and data visualization)
 
+## Architecture Requirements (Based on Review-Fixes Learnings)
+
+### Database Architecture
+- **Migration Strategy**: Always implement proper Room migrations using `DatabaseMigrations` object
+- **Performance**: Include database indices in migrations for frequently queried columns
+- **NEVER**: Use `.fallbackToDestructiveMigration()` in production builds
+- **Testing**: Use in-memory Room database for integration tests
+
+### State Management Architecture  
+- **Pattern**: Event-driven architecture with sealed class events
+- **ViewModel Structure**: Single `onUiEvent()` function for all state updates
+- **State Flow**: Use `StateFlow` with `update()` for thread-safe mutations
+- **AVOID**: Multiple `viewModelScope.launch` blocks in ViewModels
+
+### Validation Architecture
+- **Pattern**: Centralized validation with dedicated validator classes
+- **Structure**: `domain/validation/` package with `ValidationResult` sealed class
+- **Dependency Injection**: Provide validators through Hilt modules
+- **AVOID**: Inline validation logic in UI components
+
+### Performance Architecture
+- **Compose Optimization**: Use `remember`, `derivedStateOf`, and stable callbacks
+- **Monitoring**: Include `PerformanceUtils` with composition logging
+- **Memoization**: Pre-calculate expensive operations in `remember` blocks
+- **Recomposition**: Monitor and minimize unnecessary recompositions
+
+### Internationalization Architecture
+- **String Resources**: Organize by category (navigation, forms, errors, status)
+- **Error Handling**: Type-safe error classes with `UserFacingError` sealed class
+- **Localization**: Use `stringResource()` throughout UI components
+- **Configuration**: Set up `res/xml/locales_config.xml` for language support
+
 ## Testing Stack
 
 ### Core Testing Frameworks
@@ -62,6 +94,11 @@
 - **Test Naming**: Descriptive names using backticks or `@DisplayName`
 - **Test Isolation**: Each test runs independently with proper setup/teardown
 - **Parameterized Tests**: JUnit 5's `@ParameterizedTest` for data-driven testing
+- **Critical Requirements (From review-fixes.md)**:
+  - **ViewModel Testing**: Minimum 40+ test cases for complex ViewModels
+  - **Validation Testing**: 100+ test cases covering all edge cases and boundaries
+  - **Race Condition Testing**: Test concurrent state updates and event handling
+  - **Integration Testing**: 323+ total tests for production readiness
 
 ## Common Commands
 
