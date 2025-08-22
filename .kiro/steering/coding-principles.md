@@ -12,15 +12,19 @@ This document outlines the core principles that guide code quality and maintaina
 - Delete unused code rather than keeping it "just in case"
 - Choose clarity over cleverness in implementation
 
-### Android/Kotlin Application
+### Practical Guidelines
+- If you can't easily explain your solution, it's probably too complex
+- Avoid creating abstractions until you have at least 3 concrete implementations
+- Prefer composition over inheritance
+- Use standard library functions instead of custom implementations when possible
+
+### Example
 ```kotlin
 // ❌ Over-engineered solution
 abstract class BaseRepository<T> {
     abstract fun getData(): Flow<List<T>>
 }
-class ExpenseRepository : BaseRepository<Expense>() {
-    override fun getData(): Flow<List<Expense>> = expenseDao.getAllExpenses()
-}
+class ExpenseRepository : BaseRepository<Expense>()
 
 // ✅ Simple, direct solution
 class ExpenseRepository @Inject constructor(
@@ -29,12 +33,6 @@ class ExpenseRepository @Inject constructor(
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
 }
 ```
-
-### Practical Guidelines
-- If you can't easily explain your solution, it's probably too complex
-- Avoid creating abstractions until you have at least 3 concrete implementations
-- Prefer composition over inheritance
-- Use standard library functions instead of custom implementations when possible
 
 ## High Cohesion / Low Coupling
 
@@ -45,7 +43,23 @@ class ExpenseRepository @Inject constructor(
 - Avoid circular dependencies between modules
 - Use dependency injection rather than hard-coded dependencies
 
-### Android/Kotlin Application
+### File and Module Organization
+- **Maximum 300-400 lines per file** - Split larger files into focused modules
+- **One primary class per file** (with related helper classes)
+- **Group related functionality** in the same package/module
+- **Data layer**: Contains entities, DAOs, database, and repositories
+- **UI layer**: Contains ViewModels, Composables, and navigation
+- **Domain layer**: Contains business logic and validation (when needed)
+- Avoid direct dependencies between UI and Data layers (use Repository pattern)
+
+### Refactoring Strategy
+When a file becomes too large, refactor by:
+1. **Identifying related functions** and grouping them into separate files
+2. **Extracting utility functions** into dedicated utility files
+3. **Splitting UI components** into smaller, focused Composables
+4. **Separating concerns** (e.g., validation logic from UI logic)
+
+### Example
 ```kotlin
 // ✅ High cohesion: All expense-related operations in one place
 class ExpenseRepository @Inject constructor(
@@ -67,12 +81,6 @@ class AddExpenseViewModel @Inject constructor(
 }
 ```
 
-### Module Organization
-- **Data layer**: Contains entities, DAOs, database, and repositories
-- **UI layer**: Contains ViewModels, Composables, and navigation
-- **Domain layer**: Contains business logic and use cases (when needed)
-- Avoid direct dependencies between UI and Data layers (use Repository pattern)
-
 ## POLA (Principle of Least Astonishment)
 
 ### Core Principle
@@ -81,37 +89,6 @@ class AddExpenseViewModel @Inject constructor(
 - Name functions and variables clearly to indicate their purpose
 - Avoid surprising side effects in functions
 - Make error conditions explicit and handle them predictably
-
-### Android/Kotlin Application
-```kotlin
-// ❌ Surprising behavior
-fun updateExpense(expense: Expense) {
-    // Surprise! This also deletes old categories
-    categoryDao.deleteUnusedCategories()
-    expenseDao.update(expense)
-}
-
-// ✅ Clear, expected behavior
-suspend fun updateExpense(expense: Expense): Result<Unit> {
-    return try {
-        expenseDao.update(expense)
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-}
-
-// ✅ Clear naming and purpose
-suspend fun updateExpenseAndCleanupCategories(expense: Expense): Result<Unit> {
-    return try {
-        expenseDao.update(expense)
-        categoryDao.deleteUnusedCategories()
-        Result.success(Unit)
-    } catch (e: Exception) {
-        Result.failure(e)
-    }
-}
-```
 
 ### Naming Conventions
 - Use descriptive names: `calculateMonthlyTotal()` not `calc()`
@@ -125,50 +102,31 @@ suspend fun updateExpenseAndCleanupCategories(expense: Expense): Result<Unit> {
 - Provide meaningful error messages to users
 - Log technical details but show user-friendly messages
 
-## File Size Limits
-
-### Core Principle
-- **Maximum 300-400 lines per file** - Split larger files into focused modules
-- If a file exceeds this limit, refactor into smaller, cohesive components
-- Each file should have a single, clear responsibility
-- Use module organization to maintain readability and maintainability
-
-### Refactoring Guidelines
-
-When a file becomes too large:
-
-1. **Identify related functions** and group them into separate files
-2. **Extract utility functions** into dedicated utility files
-3. **Split UI components** into smaller, focused Composables
-4. **Separate concerns** (e.g., validation logic from UI logic)
-
-### Example Refactoring
+### Example
 ```kotlin
-// ❌ Large AddExpenseScreen.kt (500+ lines)
-@Composable
-fun AddExpenseScreen() {
-    // 200 lines of state management
-    // 150 lines of validation logic
-    // 200 lines of UI components
+// ❌ Surprising behavior
+fun updateExpense(expense: Expense) {
+    categoryDao.deleteUnusedCategories() // Surprise!
+    expenseDao.update(expense)
 }
 
-// ✅ Refactored structure
-// AddExpenseScreen.kt (100 lines) - Main screen composition
-// AddExpenseViewModel.kt (150 lines) - State management
-// ExpenseValidator.kt (80 lines) - Validation logic
-// ExpenseFormComponents.kt (120 lines) - Reusable form components
+// ✅ Clear, expected behavior
+suspend fun updateExpense(expense: Expense): Result<Unit> {
+    return try {
+        expenseDao.update(expense)
+        Result.success(Unit)
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+}
+
+// ✅ Clear naming when side effects are needed
+suspend fun updateExpenseAndCleanupCategories(expense: Expense): Result<Unit>
 ```
 
-### File Organization Strategy
-- **One primary class per file** (with related helper classes)
-- **Group related Composables** in component files
-- **Separate business logic** from UI logic
-- **Use meaningful file names** that reflect their single responsibility
+## Android Implementation Guidelines
 
-## Android-Specific Principles (Based on Review-Fixes Learnings)
-
-### ViewModel Best Practices
-
+### ViewModel Architecture
 **Event-Driven State Management**: Always use single event handler pattern to prevent race conditions.
 
 ```kotlin
@@ -187,24 +145,9 @@ class ExpenseViewModel @Inject constructor(
         }
     }
 }
-
-// ❌ Bad: Multiple launch blocks cause race conditions
-class ExpenseViewModel @Inject constructor(
-    private val repository: ExpenseRepository
-) : ViewModel() {
-    
-    fun updateAmount(amount: BigDecimal) {
-        viewModelScope.launch { /* state update */ }
-    }
-    
-    fun updateDescription(description: String) {
-        viewModelScope.launch { /* another state update */ }
-    }
-}
 ```
 
-### Compose Performance Principles
-
+### Compose Performance
 **Memoization First**: Always consider expensive calculations for memoization.
 
 ```kotlin
@@ -214,22 +157,12 @@ fun ExpenseChart(expenses: List<Expense>) {
     val chartData by remember(expenses) {
         derivedStateOf { calculateChartData(expenses) }
     }
-    
     val stableOnClick = remember { { expense: Expense -> /* handle click */ } }
-    
     Chart(data = chartData, onClick = stableOnClick)
-}
-
-// ❌ Bad: Expensive calculations on every recomposition
-@Composable
-fun ExpenseChart(expenses: List<Expense>) {
-    val chartData = calculateChartData(expenses) // Calculated every time!
-    Chart(data = chartData, onClick = { expense -> /* unstable lambda */ })
 }
 ```
 
-### Resource Management Principles
-
+### Resource Management
 **String Resources Always**: Never hardcode user-facing strings.
 
 ```kotlin
@@ -245,78 +178,48 @@ fun ErrorDisplay(error: UserFacingError) {
         )
     )
 }
-
-// ❌ Bad: Hardcoded strings
-@Composable
-fun ErrorDisplay(error: UserFacingError) {
-    Text(text = "An error occurred") // Not localizable!
-}
 ```
 
-### Preview Strategy Principles
-
+### Preview Strategy
 **Comprehensive Coverage**: Always create multiple preview states.
 
 ```kotlin
-// ✅ Good: Multiple preview states
 @Preview(showBackground = true, name = "Empty State")
 @Composable
 private fun ExpenseFormPreview_Empty() { /* empty form */ }
 
-@Preview(showBackground = true, name = "Filled State")
-@Composable
-private fun ExpenseFormPreview_Filled() { /* filled form */ }
-
-@Preview(showBackground = true, name = "Error State")
+@Preview(showBackground = true, name = "Error State")  
 @Composable
 private fun ExpenseFormPreview_Errors() { /* validation errors */ }
-
-@Preview(showBackground = true, name = "Loading")
-@Composable
-private fun ExpenseFormPreview_Loading() { /* loading state */ }
-
-// ❌ Bad: Single preview state
-@Preview
-@Composable
-private fun ExpenseFormPreview() { /* only one state */ }
 ```
 
-## Enforcement and Code Reviews
+## Code Review Checklist
+
+### Core Principle Compliance
+- [ ] Is the solution as simple as possible? (KISS)
+- [ ] Are related functions grouped together? (High Cohesion)
+- [ ] Are dependencies minimal and well-defined? (Low Coupling)
+- [ ] Would the code behavior surprise a new developer? (POLA)
+- [ ] Is the file under 400 lines and focused on a single responsibility?
+
+### Android-Specific Quality
+- [ ] ViewModel uses single event handler pattern?
+- [ ] Compose components use memoization for expensive calculations?
+- [ ] All user-facing strings use stringResource()?
+- [ ] Multiple preview states implemented?
+- [ ] Validation logic centralized in dedicated classes?
+
+## Integration with Development Workflow
 
 ### During Development
 - Apply these principles during the TDD Red-Green-Refactor cycle
 - Refactor code that violates these principles during the Refactor phase
 - Consider principle adherence when designing new features
-- **Reference [Android Best Practices](android-best-practices.md) for implementation patterns**
-
-### Code Review Checklist
-- [ ] Is the solution as simple as possible?
-- [ ] Are related functions grouped together (high cohesion)?
-- [ ] Are dependencies minimal and well-defined (low coupling)?
-- [ ] Would the code behavior surprise a new developer (POLA)?
-- [ ] Is the file under 400 lines and focused on a single responsibility?
-- [ ] **Android Specific Checks (From Review-Fixes)**:
-  - [ ] ViewModel uses single event handler pattern?
-  - [ ] Compose components use memoization for expensive calculations?
-  - [ ] All user-facing strings use stringResource()?
-  - [ ] Multiple preview states implemented?
-  - [ ] No race conditions in state management?
-  - [ ] Validation logic centralized in dedicated classes?
 
 ### Continuous Improvement
 - Regularly review and refactor code that violates these principles
 - Update principles based on project experience and team feedback
 - Use these principles to guide architectural decisions
 - Include principle adherence in definition of done for features
-- **Apply lessons from review-fixes.md to prevent regression**
-
-## Integration with Project Workflow
-
-These principles integrate with our existing development practices:
-
-- **TDD**: Apply principles during the Refactor phase
-- **Code Reviews**: Use principles as review criteria
-- **Architecture**: Guide architectural decisions with these principles
-- **Documentation**: Ensure code is self-documenting through clear naming and structure
 
 By following these principles consistently, we maintain a codebase that is easy to understand, modify, and extend while supporting the long-term success of the Expense Tracker project.

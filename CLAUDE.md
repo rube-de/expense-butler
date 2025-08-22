@@ -131,3 +131,10 @@ The agent will be triggered automatically when:
 @.kiro/specs/expense-tracker/tasks.md
 ## Best Practices
 - Use simple straigtforward approaches, don't over-engineer things
+
+## Sub Agents
+
+Use sub agents proactively to enhance development
+
+- `android-test-runner`: Specialized agent for Android testing, use it for testing
+- `android-best-practice-reviewer`: Expert Android code reviewer for best practices, use it after tasks to ensure adherence to best practices
