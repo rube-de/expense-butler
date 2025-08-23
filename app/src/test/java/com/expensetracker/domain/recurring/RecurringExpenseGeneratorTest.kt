@@ -13,6 +13,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import com.expensetracker.test.utils.assertSuspendDoesNotThrow
 
 class RecurringExpenseGeneratorTest {
 
@@ -123,7 +124,7 @@ class RecurringExpenseGeneratorTest {
         coEvery { mockRepository.getRecurringExpensesToGenerate(currentDate) } throws Exception("Repository error")
 
         // Should not throw exception
-        assertDoesNotThrow {
+        assertSuspendDoesNotThrow {
             generator.generateDueExpenses(currentDate)
         }
 
@@ -354,7 +355,7 @@ class RecurringExpenseGeneratorTest {
         } returns emptyList()
 
         // Should not throw exception
-        assertDoesNotThrow {
+        assertSuspendDoesNotThrow {
             generator.generateForecast(recurringExpense, ForecastPeriod.CUSTOM, fromDate, null)
         }
     }
@@ -460,13 +461,5 @@ class RecurringExpenseGeneratorTest {
             lastGenerated = lastGenerated,
             isActive = isActive
         )
-    }
-
-    private fun assertDoesNotThrow(block: suspend () -> Unit) {
-        try {
-            runTest { block() }
-        } catch (e: Exception) {
-            fail("Expected no exception but got: ${e.message}")
-        }
     }
 }

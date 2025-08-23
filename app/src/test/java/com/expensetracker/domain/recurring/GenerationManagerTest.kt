@@ -13,6 +13,7 @@ import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
+import com.expensetracker.test.utils.assertSuspendDoesNotThrow
 
 class GenerationManagerTest {
 
@@ -189,7 +190,7 @@ class GenerationManagerTest {
         coEvery { mockGenerator.generateDueExpenses(any()) } just Runs
 
         // Should not throw exception
-        assertDoesNotThrow {
+        assertSuspendDoesNotThrow {
             manager.generateIfNeeded()
         }
     }
@@ -261,15 +262,5 @@ class GenerationManagerTest {
 
         assertFalse("Should indicate no generation occurred", result.hasGenerated)
         assertTrue("Should provide informative message", result.message.contains("up to date") || result.message.isEmpty())
-    }
-
-    // Helper functions
-
-    private fun assertDoesNotThrow(block: suspend () -> Unit) {
-        try {
-            runTest { block() }
-        } catch (e: Exception) {
-            fail("Expected no exception but got: ${e.message}")
-        }
     }
 }
