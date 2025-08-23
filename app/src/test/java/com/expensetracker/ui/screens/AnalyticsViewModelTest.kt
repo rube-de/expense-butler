@@ -80,6 +80,26 @@ class AnalyticsViewModelTest {
     }
 
     @Test
+    fun `should handle loading state correctly during data fetch`() = runTest {
+        // Arrange
+        val expenses = listOf(
+            createTestExpense(amount = BigDecimal("100.00"))
+        )
+        every { mockRepository.getAllExpenses() } returns flowOf(expenses)
+        every { mockRepository.getAllCategories() } returns flowOf(emptyList())
+
+        // Act & Assert - check initial state
+        assertEquals(false, viewModel.isLoading.value) // Should start false after init completes
+        
+        viewModel.loadAnalytics(TimePeriod.YEAR)
+        
+        // Assert - loading should be false after completion
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertEquals(false, viewModel.isLoading.value)
+        assertNotNull(viewModel.analyticsData.value)
+    }
+
+    @Test
     fun `should calculate monthly trends correctly`() = runTest {
         // Arrange
         val currentMonth = LocalDate.now().withDayOfMonth(1)

@@ -62,10 +62,6 @@ fun AnalyticsScreen(
     var showExportSuccess by remember { mutableStateOf(false) }
     val context = LocalContext.current
     
-    LaunchedEffect(selectedPeriod) {
-        viewModel.loadAnalytics(selectedPeriod)
-    }
-    
     // Show drill-down view if category is selected
     categoryDrillDownData?.let { drillDown ->
         CategoryDrillDownView(

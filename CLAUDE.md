@@ -138,3 +138,4 @@ Use sub agents proactively to enhance development
 
 - `android-test-runner`: Specialized agent for Android testing, use it for testing
 - `android-best-practice-reviewer`: Expert Android code reviewer for best practices, use it after tasks to ensure adherence to best practices
+- `android-architecture-expert`: Expert in Android architecture, security, and performance optimization - use it proactively for designing and implementing android features with Google's recommended patterns

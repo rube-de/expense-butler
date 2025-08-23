@@ -56,6 +56,11 @@ class AnalyticsViewModel @Inject constructor(
     private val _availableTags = MutableStateFlow<List<String>>(emptyList())
     val availableTags: StateFlow<List<String>> = _availableTags.asStateFlow()
 
+    init {
+        // Load initial analytics data when ViewModel is created
+        loadAnalytics(TimePeriod.MONTH)
+    }
+
     /**
      * Loads analytics data for the specified time period.
      */
@@ -75,7 +80,7 @@ class AnalyticsViewModel @Inject constructor(
                 val (currentStart, currentEnd) = getPeriodDateRange(currentPeriod)
                 val (previousStart, previousEnd) = getPreviousPeriodDateRange(previousPeriod)
                 
-                combine(
+                val analyticsData = combine(
                     repository.getAllExpenses(),
                     repository.getAllCategories()
                 ) { expenses, categories ->
@@ -95,9 +100,9 @@ class AnalyticsViewModel @Inject constructor(
                     )
                     
                     currentData.copy(periodComparison = periodComparison)
-                }.collect { analyticsData ->
-                    _analyticsData.value = analyticsData
-                }
+                }.first()
+                
+                _analyticsData.value = analyticsData
             } catch (e: Exception) {
                 _error.value = "Failed to compare periods: ${e.message}"
             } finally {
@@ -140,7 +145,7 @@ class AnalyticsViewModel @Inject constructor(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                combine(
+                val drillDownData = combine(
                     repository.getExpensesByCategory(categoryId),
                     repository.getAllCategories()
                 ) { expenses, categories ->
@@ -151,9 +156,9 @@ class AnalyticsViewModel @Inject constructor(
                     } else {
                         null
                     }
-                }.collect { drillDownData ->
-                    _categoryDrillDownData.value = drillDownData
-                }
+                }.first()
+                
+                _categoryDrillDownData.value = drillDownData
             } catch (e: Exception) {
                 _error.value = "Failed to load category details: ${e.message}"
             } finally {
@@ -239,7 +244,7 @@ class AnalyticsViewModel @Inject constructor(
                     getPeriodDateRange(filter.timePeriod)
                 }
                 
-                combine(
+                val analyticsData = combine(
                     repository.getAllExpenses(),
                     repository.getAllCategories()
                 ) { expenses, categories ->
@@ -250,9 +255,9 @@ class AnalyticsViewModel @Inject constructor(
                     // Apply filters
                     val filteredExpenses = applyFilterToExpenses(expenses)
                     processAnalyticsData(filteredExpenses, categories, startDate, endDate)
-                }.collect { analyticsData ->
-                    _analyticsData.value = analyticsData
-                }
+                }.first()
+                
+                _analyticsData.value = analyticsData
             } catch (e: Exception) {
                 _error.value = "Failed to load analytics data: ${e.message}"
             } finally {
