@@ -29,7 +29,7 @@ data class RecurringExpenseUiState(
     val currency: String = "USD",
     val description: String = "",
     val frequency: RecurrenceFrequency = RecurrenceFrequency.MONTHLY,
-    val startDate: LocalDate? = null,
+    val startDate: LocalDate? = LocalDate.now(),
     val endDate: LocalDate? = null,
     val selectedCategory: Category? = null,
     val selectedTags: List<String> = emptyList(),
@@ -192,46 +192,39 @@ class RecurringExpenseViewModel @Inject constructor(
         try {
             // Initialize categories first
             repository.initializeDefaultCategories()
-        } catch (e: Exception) {
-            println("Failed to initialize categories: ${e.message}")
-        }
-        
-        // Start collecting recurring expenses
-        viewModelScope.launch {
-            try {
-                repository.getAllRecurringExpenses().collect { expenses ->
-                    _uiState.update { it.copy(recurringExpenses = expenses) }
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(errorMessage = UserFacingError.LoadFailedWithReason(e.message ?: "Unknown error"))
-                }
-            }
-        }
-        
-        // Start collecting categories separately
-        viewModelScope.launch {
-            try {
-                repository.getAllCategories().collect { categories ->
-                    _uiState.update { it.copy(availableCategories = categories) }
-                }
-            } catch (e: Exception) {
-                // Category loading failure shouldn't break the whole screen
-                println("Failed to load categories: ${e.message}")
-            }
-        }
-        
-        // Load last sync time
-        try {
+            
+            // Load last sync time
             val lastSyncTime = generationManager.getLastGenerationTime()
             _uiState.update { it.copy(lastSyncTime = lastSyncTime) }
+            
+            // Start collecting recurring expenses in a separate coroutine
+            viewModelScope.launch {
+                try {
+                    repository.getAllRecurringExpenses().collect { expenses ->
+                        _uiState.update { it.copy(recurringExpenses = expenses) }
+                    }
+                } catch (e: Exception) {
+                    _uiState.update {
+                        it.copy(errorMessage = UserFacingError.LoadFailedWithReason(e.message ?: "Unknown error"))
+                    }
+                }
+            }
+            
+            // Collect categories using collectLatest to ensure they load properly
+            // This is the same pattern used in AddExpenseViewModel
+            repository.getAllCategories().collectLatest { categories ->
+                _uiState.update { it.copy(availableCategories = categories) }
+            }
         } catch (e: Exception) {
-            println("Failed to load sync time: ${e.message}")
+            _uiState.update {
+                it.copy(errorMessage = UserFacingError.LoadFailedWithReason(e.message ?: "Unknown error"))
+            }
         }
     }
 
     private suspend fun handleSaveRecurringExpense() {
         if (!validateForm()) {
+            // Validation failed - errors are already set in UI state
             return
         }
 
@@ -245,6 +238,7 @@ class RecurringExpenseViewModel @Inject constructor(
                 val result = modificationHandler.updateRecurringExpense(updatedExpense, currentState.includePast)
                 
                 if (result.isSuccess) {
+                    handleResetForm()
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -254,7 +248,6 @@ class RecurringExpenseViewModel @Inject constructor(
                             errorMessage = null
                         )
                     }
-                    handleResetForm()
                 } else {
                     _uiState.update {
                         it.copy(
@@ -269,6 +262,7 @@ class RecurringExpenseViewModel @Inject constructor(
                 val result = repository.insertRecurringExpense(recurringExpense)
                 
                 if (result.isSuccess) {
+                    handleResetForm()
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -276,7 +270,6 @@ class RecurringExpenseViewModel @Inject constructor(
                             errorMessage = null
                         )
                     }
-                    handleResetForm()
                 } else {
                     _uiState.update {
                         it.copy(
@@ -391,7 +384,7 @@ class RecurringExpenseViewModel @Inject constructor(
                 currency = "USD",
                 description = "",
                 frequency = RecurrenceFrequency.MONTHLY,
-                startDate = null,
+                startDate = LocalDate.now(),
                 endDate = null,
                 selectedCategory = null,
                 selectedTags = emptyList(),

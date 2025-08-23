@@ -10,6 +10,7 @@ import com.expensetracker.domain.validation.AmountValidator
 import com.expensetracker.domain.validation.CategoryValidator
 import com.expensetracker.domain.validation.DescriptionValidator
 import com.expensetracker.domain.validation.TagValidator
+import com.expensetracker.domain.validation.ValidationResult
 import com.expensetracker.test.rules.CoroutineTestRule
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,6 +55,14 @@ class RecurringExpenseViewModelTest {
         every { mockRepository.getAllRecurringExpenses() } returns flowOf(emptyList())
         every { mockRepository.getAllCategories() } returns flowOf(emptyList())
         every { mockGenerationManager.getLastGenerationTime() } returns System.currentTimeMillis()
+        
+        // Setup validator mocks to return Success by default
+        every { mockAmountValidator.validate(any()) } returns ValidationResult.Success
+        every { mockAmountValidator.validate(null) } returns ValidationResult.Error("Amount is required")
+        every { mockDescriptionValidator.validate(any()) } returns ValidationResult.Success
+        every { mockCategoryValidator.validate(any()) } returns ValidationResult.Success
+        every { mockCategoryValidator.validate(null) } returns ValidationResult.Error("Category is required")
+        every { mockTagValidator.validateTagList(any()) } returns ValidationResult.Success
 
         viewModel = RecurringExpenseViewModel(
             repository = mockRepository,
@@ -93,6 +102,7 @@ class RecurringExpenseViewModelTest {
         every { mockRepository.getAllRecurringExpenses() } returns flowOf(recurringExpenses)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.LoadInitialData)
+        coroutineTestRule.advanceUntilIdle() // Wait for all coroutines to complete
 
         verify { mockRepository.getAllRecurringExpenses() }
     }
@@ -103,6 +113,7 @@ class RecurringExpenseViewModelTest {
         every { mockRepository.getAllCategories() } returns flowOf(categories)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.LoadInitialData)
+        coroutineTestRule.advanceUntilIdle() // Wait for all coroutines to complete
 
         verify { mockRepository.getAllCategories() }
     }
@@ -114,6 +125,7 @@ class RecurringExpenseViewModelTest {
         val newAmount = BigDecimal("150.00")
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.AmountChanged(newAmount))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Amount should be updated", newAmount, viewModel.uiState.value.amount)
         assertNull("Amount error should be cleared", viewModel.uiState.value.amountError)
@@ -124,6 +136,7 @@ class RecurringExpenseViewModelTest {
         val newCurrency = "EUR"
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.CurrencyChanged(newCurrency))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Currency should be updated", newCurrency, viewModel.uiState.value.currency)
     }
@@ -133,6 +146,7 @@ class RecurringExpenseViewModelTest {
         val newDescription = "Monthly subscription"
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.DescriptionChanged(newDescription))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Description should be updated", newDescription, viewModel.uiState.value.description)
         assertNull("Description error should be cleared", viewModel.uiState.value.descriptionError)
@@ -143,6 +157,7 @@ class RecurringExpenseViewModelTest {
         val newFrequency = RecurrenceFrequency.WEEKLY
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.FrequencyChanged(newFrequency))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Frequency should be updated", newFrequency, viewModel.uiState.value.frequency)
     }
@@ -152,6 +167,7 @@ class RecurringExpenseViewModelTest {
         val newStartDate = LocalDate.of(2024, 6, 15)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.StartDateChanged(newStartDate))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Start date should be updated", newStartDate, viewModel.uiState.value.startDate)
     }
@@ -161,6 +177,7 @@ class RecurringExpenseViewModelTest {
         val newEndDate = LocalDate.of(2024, 12, 31)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.EndDateChanged(newEndDate))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("End date should be updated", newEndDate, viewModel.uiState.value.endDate)
     }
@@ -170,6 +187,7 @@ class RecurringExpenseViewModelTest {
         val category = createTestCategory(id = 2L, name = "Transport")
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.CategorySelected(category))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Selected category should be updated", category, viewModel.uiState.value.selectedCategory)
         assertNull("Category error should be cleared", viewModel.uiState.value.categoryError)
@@ -180,6 +198,7 @@ class RecurringExpenseViewModelTest {
         val newTags = listOf("subscription", "entertainment")
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.TagsChanged(newTags))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Tags should be updated", newTags, viewModel.uiState.value.selectedTags)
     }
@@ -192,6 +211,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockRepository.insertRecurringExpense(any()) } returns Result.success(1L)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.SaveRecurringExpense)
+        coroutineTestRule.advanceUntilIdle()
 
         coVerify(exactly = 1) { mockRepository.insertRecurringExpense(any()) }
         assertTrue("Should indicate save success", viewModel.uiState.value.isSaved)
@@ -226,6 +246,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockRepository.insertRecurringExpense(any()) } returns Result.failure(Exception(errorMessage))
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.SaveRecurringExpense)
+        coroutineTestRule.advanceUntilIdle()
 
         assertFalse("Should not indicate save success", viewModel.uiState.value.isSaved)
         assertNotNull("Should show error message", viewModel.uiState.value.errorMessage)
@@ -239,6 +260,7 @@ class RecurringExpenseViewModelTest {
         val recurringExpense = createTestRecurringExpense(id = 1L)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.EditRecurringExpense(recurringExpense))
+        coroutineTestRule.advanceUntilIdle()
 
         assertTrue("Should be in edit mode", viewModel.uiState.value.isEditMode)
         assertEquals("Should populate form with expense data", recurringExpense.amount, viewModel.uiState.value.amount)
@@ -262,6 +284,7 @@ class RecurringExpenseViewModelTest {
         val initialIncludePast = viewModel.uiState.value.includePast
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.ToggleIncludePast)
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Include past should be toggled", !initialIncludePast, viewModel.uiState.value.includePast)
     }
@@ -274,6 +297,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockModificationHandler.updateRecurringExpense(any(), any()) } returns Result.success(Unit)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.SaveRecurringExpense)
+        coroutineTestRule.advanceUntilIdle()
 
         coVerify(exactly = 1) { mockModificationHandler.updateRecurringExpense(any(), false) }
         assertFalse("Should exit edit mode after save", viewModel.uiState.value.isEditMode)
@@ -288,6 +312,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockModificationHandler.updateRecurringExpense(any(), any()) } returns Result.success(Unit)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.SaveRecurringExpense)
+        coroutineTestRule.advanceUntilIdle()
 
         coVerify(exactly = 1) { mockModificationHandler.updateRecurringExpense(any(), true) }
     }
@@ -300,6 +325,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockRepository.deleteRecurringExpense(expenseId) } returns Result.success(Unit)
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.DeleteRecurringExpense(expenseId))
+        coroutineTestRule.advanceUntilIdle()
 
         coVerify(exactly = 1) { mockRepository.deleteRecurringExpense(expenseId) }
     }
@@ -310,6 +336,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockRepository.deleteRecurringExpense(expenseId) } returns Result.failure(Exception("Delete failed"))
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.DeleteRecurringExpense(expenseId))
+        coroutineTestRule.advanceUntilIdle()
 
         assertNotNull("Should show error message", viewModel.uiState.value.errorMessage)
     }
@@ -333,6 +360,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockGenerator.generateForecast(recurringExpense, ForecastPeriod.NEXT_MONTH, any(), any()) } returns expectedForecast
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.GenerateForecast(recurringExpense, ForecastPeriod.NEXT_MONTH))
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Should update forecast", expectedForecast, viewModel.uiState.value.forecast)
         coVerify(exactly = 1) { mockGenerator.generateForecast(any(), any(), any(), any()) }
@@ -360,6 +388,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockGenerationManager.generateManually() } returns generationResult
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.ManualSync)
+        coroutineTestRule.advanceUntilIdle()
 
         coVerify(exactly = 1) { mockGenerationManager.generateManually() }
         assertEquals("Should show sync message", generationResult.message, viewModel.uiState.value.syncMessage)
@@ -371,6 +400,7 @@ class RecurringExpenseViewModelTest {
         coEvery { mockGenerationManager.generateManually() } returns generationResult
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.ManualSync)
+        coroutineTestRule.advanceUntilIdle()
 
         assertEquals("Should update sync message", "Expenses updated", viewModel.uiState.value.syncMessage)
         assertEquals("Should update last sync time", generationResult.timestamp, viewModel.uiState.value.lastSyncTime)
@@ -384,6 +414,7 @@ class RecurringExpenseViewModelTest {
         setupValidFormState()
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.ResetForm)
+        coroutineTestRule.advanceUntilIdle()
 
         assertNull("Amount should be reset", viewModel.uiState.value.amount)
         assertEquals("Currency should be reset to default", "USD", viewModel.uiState.value.currency)
@@ -400,8 +431,10 @@ class RecurringExpenseViewModelTest {
     fun `should clear error when clear error event received`() = runTest {
         // First set an error state
         viewModel.onUiEvent(RecurringExpenseUiEvent.SaveRecurringExpense) // This should cause validation error
+        coroutineTestRule.advanceUntilIdle()
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.ClearError)
+        coroutineTestRule.advanceUntilIdle()
 
         assertNull("Error message should be cleared", viewModel.uiState.value.errorMessage)
     }
@@ -411,6 +444,7 @@ class RecurringExpenseViewModelTest {
         every { mockRepository.getAllRecurringExpenses() } throws Exception("Database error")
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.LoadInitialData)
+        coroutineTestRule.advanceUntilIdle()
 
         assertNotNull("Should show error message", viewModel.uiState.value.errorMessage)
     }
@@ -421,8 +455,10 @@ class RecurringExpenseViewModelTest {
     fun `should validate form before saving`() = runTest {
         // Setup invalid form (missing amount)
         viewModel.onUiEvent(RecurringExpenseUiEvent.DescriptionChanged("Test"))
+        coroutineTestRule.advanceUntilIdle()
 
         viewModel.onUiEvent(RecurringExpenseUiEvent.SaveRecurringExpense)
+        coroutineTestRule.advanceUntilIdle()
 
         coVerify(exactly = 0) { mockRepository.insertRecurringExpense(any()) }
         assertNotNull("Should show validation error", viewModel.uiState.value.amountError)
@@ -481,11 +517,12 @@ class RecurringExpenseViewModelTest {
         )
     }
 
-    private fun setupValidFormState() {
+    private suspend fun setupValidFormState() {
         viewModel.onUiEvent(RecurringExpenseUiEvent.AmountChanged(BigDecimal("100.00")))
         viewModel.onUiEvent(RecurringExpenseUiEvent.DescriptionChanged("Valid description"))
         viewModel.onUiEvent(RecurringExpenseUiEvent.CategorySelected(createTestCategory()))
         viewModel.onUiEvent(RecurringExpenseUiEvent.FrequencyChanged(RecurrenceFrequency.MONTHLY))
         viewModel.onUiEvent(RecurringExpenseUiEvent.StartDateChanged(LocalDate.now()))
+        coroutineTestRule.advanceUntilIdle()
     }
 }

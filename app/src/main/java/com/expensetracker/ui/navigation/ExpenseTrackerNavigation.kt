@@ -29,6 +29,7 @@ import com.expensetracker.ui.screens.AddExpenseScreen
 import com.expensetracker.ui.screens.AnalyticsScreen
 import com.expensetracker.ui.screens.EditExpenseScreen
 import com.expensetracker.ui.screens.ExpenseListScreen
+import com.expensetracker.ui.screens.RecurringExpensesScreen
 import com.expensetracker.ui.theme.spacing
 
 data class BottomNavItem(
@@ -128,8 +129,7 @@ fun ExpenseTrackerNavHost(
         }
         
         composable(Screen.RecurringExpenses.route) {
-            // Placeholder for RecurringExpensesScreen
-            PlaceholderScreen("Recurring Expenses")
+            RecurringExpensesScreen()
         }
         
         composable(Screen.Settings.route) {

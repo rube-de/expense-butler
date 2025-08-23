@@ -48,8 +48,8 @@ class ExpenseListViewModel @Inject constructor(
     private fun loadInitialData() {
         viewModelScope.launch {
             try {
-                // Load categories
-                repository.getAllCategories().collect { categories ->
+                // Load categories using collectLatest for proper Flow collection
+                repository.getAllCategories().collectLatest { categories ->
                     _uiState.update { it.copy(categories = categories) }
                 }
             } catch (e: Exception) {

@@ -49,9 +49,7 @@ abstract class IsolatedScreenTest {
     open fun setup() {
         hiltRule.inject()
         
-        // Initialize ViewModels manually for isolated testing
-        addExpenseViewModel = AddExpenseViewModel(repository)
-        analyticsViewModel = AnalyticsViewModel(repository)
+        // ViewModels are now injected by Hilt automatically
         
         // Initialize default categories for all tests
         runBlocking {
