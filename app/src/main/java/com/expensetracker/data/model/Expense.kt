@@ -15,6 +15,7 @@ data class Expense(
     val categoryId: Long,
     val tags: List<String>, // Will be converted using TypeConverter
     val date: LocalDateTime,
+    val recurringExpenseId: Long? = null, // Links to source recurring expense if generated
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now()
 ) {

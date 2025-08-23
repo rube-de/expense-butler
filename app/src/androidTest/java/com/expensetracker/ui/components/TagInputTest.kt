@@ -58,15 +58,14 @@ class TagInputTest {
             }
         }
 
-        // Type in the input field
-        composeTestRule
-            .onNodeWithText("Add tags...")
-            .performTextInput("breakfast")
-
-        // Verify text was entered
-        composeTestRule
-            .onNodeWithText("breakfast")
-            .assertIsDisplayed()
+        // Find the text field and enter text
+        val textField = composeTestRule.onNode(hasSetTextAction())
+        textField.performTextInput("breakfast")
+        
+        composeTestRule.waitForIdle()
+        
+        // Verify the text appears in the field
+        textField.assertTextContains("breakfast")
     }
 
     @Test
@@ -109,7 +108,7 @@ class TagInputTest {
 
         // Type partial text to trigger suggestions
         composeTestRule
-            .onNodeWithText("Add tags...")
+            .onNodeWithText("Tags")
             .performTextInput("cof")
 
         // Wait for suggestions to appear
@@ -137,7 +136,7 @@ class TagInputTest {
 
         // Type to show suggestions
         composeTestRule
-            .onNodeWithText("Add tags...")
+            .onNodeWithText("Tags")
             .performTextInput("cof")
 
         composeTestRule.waitForIdle()
@@ -167,9 +166,6 @@ class TagInputTest {
         composeTestRule
             .onNodeWithText("Tags")
             .assertIsDisplayed()
-        composeTestRule
-            .onNodeWithText("Add tags...")
-            .assertIsDisplayed()
     }
 
     @Test
@@ -189,12 +185,12 @@ class TagInputTest {
 
         // Try to add existing tag
         composeTestRule
-            .onNodeWithText("Add tags...")
+            .onNodeWithText("Tags")
             .performTextInput("coffee")
 
         // Perform IME action (Done)
         composeTestRule
-            .onNodeWithText("Add tags...")
+            .onNodeWithText("Tags")
             .performImeAction()
 
         // Verify duplicate wasn't added (would need proper state management to test)

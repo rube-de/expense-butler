@@ -19,11 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.expensetracker.domain.validation.TagValidator
 import com.expensetracker.ui.theme.ExpenseTrackerTheme
 import com.expensetracker.ui.theme.spacing
 
@@ -34,13 +35,14 @@ fun TagInput(
     availableTags: List<String>,
     onTagsChanged: (List<String>) -> Unit,
     modifier: Modifier = Modifier,
+    validator: TagValidator = TagValidator(),
     label: String = "Tags",
-    placeholder: String = "Add tags..."
+    placeholder: String = "Add tags...",
+    onTagError: (String?) -> Unit = {}
 ) {
     var inputText by remember { mutableStateOf("") }
     var showSuggestions by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
-    // val keyboardController = LocalSoftwareKeyboardController.current
     
     val filteredSuggestions = remember(inputText, availableTags, selectedTags) {
         if (inputText.isBlank()) {
@@ -77,25 +79,31 @@ fun TagInput(
         OutlinedTextField(
             value = inputText,
             onValueChange = { newValue ->
-                inputText = newValue
-                showSuggestions = newValue.isNotBlank()
+                inputText = validator.filterTagInput(newValue)
+                showSuggestions = inputText.isNotBlank()
             },
             label = { Text(label) },
             placeholder = { Text(placeholder) },
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester),
+                .focusRequester(focusRequester)
+                .testTag("tag_input"),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.None,
                 imeAction = ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
                 onDone = {
-                    if (inputText.isNotBlank() && !selectedTags.contains(inputText.trim())) {
-                        onTagsChanged(selectedTags + inputText.trim())
-                        inputText = ""
+                    if (inputText.isNotBlank()) {
+                        val (newTags, result) = validator.addTagToList(inputText, selectedTags)
+                        if (result.isValid) {
+                            onTagsChanged(newTags)
+                            inputText = ""
+                            onTagError(null)
+                        } else {
+                            onTagError(result.getErrorMessage())
+                        }
                     }
-                    // keyboardController?.hide()
                     showSuggestions = false
                 }
             ),
@@ -103,10 +111,14 @@ fun TagInput(
                 if (inputText.isNotBlank()) {
                     IconButton(
                         onClick = {
-                            if (!selectedTags.contains(inputText.trim())) {
-                                onTagsChanged(selectedTags + inputText.trim())
+                            val (newTags, result) = validator.addTagToList(inputText, selectedTags)
+                            if (result.isValid) {
+                                onTagsChanged(newTags)
                                 inputText = ""
                                 showSuggestions = false
+                                onTagError(null)
+                            } else {
+                                onTagError(result.getErrorMessage())
                             }
                         }
                     ) {
@@ -150,7 +162,7 @@ private fun SelectedTagChip(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.testTag("tag_chip"),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.primaryContainer
     ) {

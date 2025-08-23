@@ -1,0 +1,39 @@
+{
+"hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run .claude/hooks/clear_session.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run .claude/hooks/android_review.py"
+          },
+          {
+            "type": "command",
+            "command": "uv run .claude/hooks/track_session_files.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run .claude/hooks/test_check.py"
+          }
+        ]
+      }
+    ]
+  }
+}

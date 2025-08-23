@@ -9,12 +9,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.expensetracker.R
+import com.expensetracker.domain.validation.AmountValidator
 import com.expensetracker.ui.theme.ExpenseTrackerTheme
 import com.expensetracker.ui.theme.spacing
 import java.math.BigDecimal
@@ -29,7 +32,8 @@ fun AmountInput(
     currency: String,
     onAmountChanged: (BigDecimal?) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Amount",
+    validator: AmountValidator = AmountValidator(),
+    label: String? = null,
     isError: Boolean = false,
     errorMessage: String? = null,
     imeAction: ImeAction = ImeAction.Next,
@@ -40,7 +44,6 @@ fun AmountInput(
     }
     
     val focusRequester = remember { FocusRequester() }
-    // val keyboardController = LocalSoftwareKeyboardController.current
     
     val currencySymbol = remember(currency) {
         try {
@@ -54,29 +57,24 @@ fun AmountInput(
         OutlinedTextField(
             value = textValue,
             onValueChange = { newValue ->
-                // Allow only numbers and decimal point
-                val filteredValue = newValue.filter { it.isDigit() || it == '.' }
+                // Filter input using validator
+                val filteredValue = validator.filterAmountInput(newValue)
+                textValue = filteredValue
                 
-                // Prevent multiple decimal points
-                val decimalCount = filteredValue.count { it == '.' }
-                if (decimalCount <= 1) {
-                    textValue = filteredValue
-                    
-                    // Convert to BigDecimal
-                    val bigDecimalValue = try {
-                        if (filteredValue.isBlank()) {
-                            null
-                        } else {
-                            BigDecimal(filteredValue)
-                        }
-                    } catch (e: NumberFormatException) {
+                // Convert to BigDecimal and notify parent
+                val bigDecimalValue = try {
+                    if (filteredValue.isBlank()) {
                         null
+                    } else {
+                        BigDecimal(filteredValue)
                     }
-                    
-                    onAmountChanged(bigDecimalValue)
+                } catch (e: NumberFormatException) {
+                    null
                 }
+                
+                onAmountChanged(bigDecimalValue)
             },
-            label = { Text(label) },
+            label = { Text(label ?: stringResource(R.string.label_amount)) },
             leadingIcon = {
                 Text(
                     text = currencySymbol,
@@ -92,13 +90,13 @@ fun AmountInput(
                 onNext = { onImeAction() },
                 onDone = { 
                     onImeAction()
-                    // keyboardController?.hide()
                 }
             ),
             isError = isError,
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester),
+                .focusRequester(focusRequester)
+                .testTag("amount_input"),
             singleLine = true
         )
         
@@ -107,7 +105,9 @@ fun AmountInput(
                 text = errorMessage,
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = MaterialTheme.spacing.medium, top = MaterialTheme.spacing.extraSmall)
+                modifier = Modifier
+                    .padding(start = MaterialTheme.spacing.medium, top = MaterialTheme.spacing.extraSmall)
+                    .testTag("amount_error_message")
             )
         }
         

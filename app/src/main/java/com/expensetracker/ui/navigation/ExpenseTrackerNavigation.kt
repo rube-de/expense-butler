@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -21,11 +22,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import androidx.navigation.NavType
 import com.expensetracker.R
 import com.expensetracker.ui.screens.AddExpenseScreen
+import com.expensetracker.ui.screens.AnalyticsScreen
 import com.expensetracker.ui.screens.EditExpenseScreen
 import com.expensetracker.ui.screens.ExpenseListScreen
+import com.expensetracker.ui.screens.RecurringExpensesScreen
 import com.expensetracker.ui.theme.spacing
 
 data class BottomNavItem(
@@ -45,14 +49,17 @@ private val bottomNavItems = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseTrackerApp(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    generationResult: com.expensetracker.domain.recurring.GenerationResult? = null
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                modifier = Modifier.testTag("navigation_bar")
+            ) {
                 bottomNavItems.forEach { item ->
                     NavigationBarItem(
                         icon = { Icon(item.icon, contentDescription = null) },
@@ -80,7 +87,8 @@ fun ExpenseTrackerApp(
     ) { innerPadding ->
         ExpenseTrackerNavHost(
             navController = navController,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            generationResult = generationResult
         )
     }
 }
@@ -88,7 +96,8 @@ fun ExpenseTrackerApp(
 @Composable
 fun ExpenseTrackerNavHost(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    generationResult: com.expensetracker.domain.recurring.GenerationResult? = null
 ) {
     NavHost(
         navController = navController,
@@ -102,7 +111,8 @@ fun ExpenseTrackerNavHost(
                 },
                 onNavigateToEditExpense = { expenseId ->
                     navController.navigate(Screen.EditExpense.createRoute(expenseId))
-                }
+                },
+                generationResult = generationResult
             )
         }
         
@@ -114,8 +124,7 @@ fun ExpenseTrackerNavHost(
         }
         
         composable(Screen.Analytics.route) {
-            // Placeholder for AnalyticsScreen
-            PlaceholderScreen("Analytics")
+            AnalyticsScreen()
         }
         
         composable(Screen.AIChat.route) {
@@ -124,8 +133,7 @@ fun ExpenseTrackerNavHost(
         }
         
         composable(Screen.RecurringExpenses.route) {
-            // Placeholder for RecurringExpensesScreen
-            PlaceholderScreen("Recurring Expenses")
+            RecurringExpensesScreen()
         }
         
         composable(Screen.Settings.route) {
@@ -135,7 +143,8 @@ fun ExpenseTrackerNavHost(
         
         composable(
             route = Screen.EditExpense.route,
-            arguments = listOf(navArgument("expenseId") { type = NavType.LongType })
+            arguments = listOf(navArgument("expenseId") { type = NavType.LongType }),
+            deepLinks = listOf(navDeepLink { uriPattern = "expensetracker://edit/{expenseId}" })
         ) {
             EditExpenseScreen(
                 onNavigateBack = { navController.popBackStack() },

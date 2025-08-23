@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.expensetracker.data.model.Category
 import com.expensetracker.data.model.Expense
 import com.expensetracker.data.repository.ExpenseRepository
+import com.expensetracker.domain.recurring.GenerationResult
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -232,5 +233,107 @@ class ExpenseListViewModelTest {
         assertEquals(sampleCategories[0], state.selectedCategoryFilter)
         assertEquals(listOf("work"), state.selectedTags)
         assertEquals(filteredExpenses, state.expenses)
+    }
+
+    // Generation Status Tests
+    
+    @Test
+    fun `should show generation banner when expenses were generated`() = runTest {
+        // Given a generation result with expenses generated
+        val generationResult = GenerationResult(
+            hasGenerated = true,
+            message = "3 recurring expenses generated",
+            timestamp = System.currentTimeMillis()
+        )
+        
+        // When the view model is notified
+        viewModel.setGenerationResult(generationResult)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Then the UI state should show the generation banner
+        val state = viewModel.uiState.value
+        assertTrue(state.showGenerationBanner)
+        assertEquals("3 recurring expenses generated", state.generationMessage)
+    }
+    
+    @Test
+    fun `should not show generation banner when no expenses were generated`() = runTest {
+        // Given a generation result with no expenses generated
+        val generationResult = GenerationResult(
+            hasGenerated = false,
+            message = "",
+            timestamp = System.currentTimeMillis()
+        )
+        
+        // When the view model is notified
+        viewModel.setGenerationResult(generationResult)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Then the UI state should not show the generation banner
+        val state = viewModel.uiState.value
+        assertFalse(state.showGenerationBanner)
+        assertNull(state.generationMessage)
+    }
+    
+    @Test
+    fun `should dismiss generation banner when user dismisses it`() = runTest {
+        // Given a generation banner is showing
+        val generationResult = GenerationResult(
+            hasGenerated = true,
+            message = "Expenses generated",
+            timestamp = System.currentTimeMillis()
+        )
+        viewModel.setGenerationResult(generationResult)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // When the user dismisses the banner
+        viewModel.dismissGenerationBanner()
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Then the banner should be hidden
+        val state = viewModel.uiState.value
+        assertFalse(state.showGenerationBanner)
+        assertNull(state.generationMessage)
+    }
+    
+    @Test
+    fun `should handle null generation result gracefully`() = runTest {
+        // When the view model receives a null generation result
+        viewModel.setGenerationResult(null)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Then no banner should be shown
+        val state = viewModel.uiState.value
+        assertFalse(state.showGenerationBanner)
+        assertNull(state.generationMessage)
+    }
+    
+    @Test
+    fun `should update generation banner message correctly`() = runTest {
+        // Given multiple generation results
+        val firstResult = GenerationResult(
+            hasGenerated = true,
+            message = "2 expenses generated",
+            timestamp = System.currentTimeMillis()
+        )
+        val secondResult = GenerationResult(
+            hasGenerated = true,
+            message = "5 expenses generated",
+            timestamp = System.currentTimeMillis() + 1000
+        )
+        
+        // When results are set sequentially
+        viewModel.setGenerationResult(firstResult)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        var state = viewModel.uiState.value
+        assertEquals("2 expenses generated", state.generationMessage)
+        
+        viewModel.setGenerationResult(secondResult)
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Then the message should be updated
+        state = viewModel.uiState.value
+        assertEquals("5 expenses generated", state.generationMessage)
     }
 }

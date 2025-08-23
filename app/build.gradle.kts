@@ -19,7 +19,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.expensetracker.HiltTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -53,6 +53,26 @@ android {
             excludes += "/META-INF/LICENSE.md"
             excludes += "/META-INF/LICENSE-notice.md"
         }
+    }
+    
+    // Enable per-app language preferences (manual configuration)
+    // androidResources {
+    //     generateLocaleConfig = true
+    // }
+    testOptions {
+        unitTests.all {
+            // Support both JUnit 4 and JUnit 5 tests
+            it.useJUnitPlatform {
+                // Include JUnit Vintage for JUnit 4 tests
+                includeEngines("junit-vintage", "junit-jupiter")
+            }
+        }
+    }
+}
+
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
     }
 }
 
@@ -99,14 +119,26 @@ dependencies {
     implementation("com.patrykandpatrick.vico:compose-m3:1.13.1")
     implementation("com.patrykandpatrick.vico:core:1.13.1")
 
-    // Testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.mockito:mockito-core:5.7.0")
+    // Testing - Core
+    testImplementation("junit:junit:4.13.2") // Keep for compatibility
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.1") // JUnit 5
+    testImplementation("org.junit.vintage:junit-vintage-engine:5.10.1") // For JUnit 4 compatibility
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1") // Parameterized tests
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1") // JUnit Platform Launcher
+    
+    // Testing - Assertions
+    testImplementation("com.google.truth:truth:1.1.5") // Google Truth for better assertions
+    testImplementation("io.kotest:kotest-assertions-core:5.8.0") // Kotest assertions
+    
+    // Testing - Mocking
+    testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("org.mockito:mockito-core:5.7.0") // Keep for legacy tests
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    
+    // Testing - Coroutines & Architecture
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.room:room-testing:2.6.1")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
-    testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("app.cash.turbine:turbine:1.0.0")
 
     // Android Testing
@@ -121,6 +153,7 @@ dependencies {
     androidTestImplementation("io.mockk:mockk-android:1.13.8")
     androidTestImplementation("app.cash.turbine:turbine:1.0.0")
     androidTestImplementation("androidx.arch.core:core-testing:2.2.0")
+    androidTestImplementation("com.google.truth:truth:1.1.5") // Better assertions for Android tests
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.52")
 
     // Debug

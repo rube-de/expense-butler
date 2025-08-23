@@ -23,12 +23,82 @@
 - **Kotlinx Serialization**: 1.6.2 (JSON serialization)
 - **Vico**: 1.13.1 (charts and data visualization)
 
+## Architecture Requirements (Based on Review-Fixes Learnings)
+
+### Database Architecture
+- **Migration Strategy**: Always implement proper Room migrations using `DatabaseMigrations` object
+- **Performance**: Include database indices in migrations for frequently queried columns
+- **NEVER**: Use `.fallbackToDestructiveMigration()` in production builds
+- **Testing**: Use in-memory Room database for integration tests
+
+### State Management Architecture  
+- **Pattern**: Event-driven architecture with sealed class events
+- **ViewModel Structure**: Single `onUiEvent()` function for all state updates
+- **State Flow**: Use `StateFlow` with `update()` for thread-safe mutations
+- **AVOID**: Multiple `viewModelScope.launch` blocks in ViewModels
+
+### Validation Architecture
+- **Pattern**: Centralized validation with dedicated validator classes
+- **Structure**: `domain/validation/` package with `ValidationResult` sealed class
+- **Dependency Injection**: Provide validators through Hilt modules
+- **AVOID**: Inline validation logic in UI components
+
+### Performance Architecture
+- **Compose Optimization**: Use `remember`, `derivedStateOf`, and stable callbacks
+- **Monitoring**: Include `PerformanceUtils` with composition logging
+- **Memoization**: Pre-calculate expensive operations in `remember` blocks
+- **Recomposition**: Monitor and minimize unnecessary recompositions
+
+### Internationalization Architecture
+- **String Resources**: Organize by category (navigation, forms, errors, status)
+- **Error Handling**: Type-safe error classes with `UserFacingError` sealed class
+- **Localization**: Use `stringResource()` throughout UI components
+- **Configuration**: Set up `res/xml/locales_config.xml` for language support
+
 ## Testing Stack
-- **Unit Tests**: JUnit 4, Mockito, Coroutines Test
-- **Android Tests**: Espresso, Compose UI Testing
-- **Room Testing**: Room testing library
-- **Architecture Testing**: Core testing library
-- **Development Approach**: Test-Driven Development (TDD) - See [TDD Guidelines](tdd.md)
+
+### Core Testing Frameworks
+- **JUnit 5**: Modern testing framework with JUnit 4 compatibility via Vintage Engine
+- **JUnit 4**: Maintained for Android instrumented tests and legacy compatibility
+- **Coroutines Test**: `kotlinx-coroutines-test` for testing suspend functions and Flows
+- **Turbine**: Flow testing library for clean async assertions
+
+### Assertion Libraries
+- **Google Truth**: Fluent assertions with better error messages (`assertThat(value).isEqualTo(expected)`)
+- **Kotest Assertions**: Kotlin-first assertion library with property testing support
+- **JUnit Assertions**: Basic assertions for simple test cases
+
+### Mocking Frameworks
+- **MockK**: Kotlin-first mocking library with coroutine support (primary)
+- **Mockito**: Java mocking library (maintained for legacy tests)
+- **Fake Implementations**: Custom test doubles in `test/fakes/` directory
+
+### Android Testing
+- **Espresso**: UI testing framework for Android views
+- **Compose UI Testing**: Testing framework for Jetpack Compose components
+- **Room Testing**: In-memory database testing
+- **Hilt Testing**: Dependency injection testing support
+- **Architecture Components Testing**: LiveData and ViewModel testing utilities
+
+### Test Infrastructure
+- **Test Fixtures**: Builders and factories in `test/fixtures/` for consistent test data
+- **Test Rules**: Custom JUnit rules in `test/rules/` for common setup
+  - `CoroutineTestRule`: Manages test dispatchers for coroutine testing
+  - `InstantTaskExecutorRule`: Synchronous execution for Architecture Components
+  - `MockKRule`: Automatic mock cleanup between tests
+- **Fake Repository**: `FakeExpenseRepository` for controlled testing scenarios
+
+### Testing Best Practices
+- **Test-Driven Development (TDD)**: Red-Green-Refactor cycle - See [TDD Guidelines](tdd.md)
+- **Testing Pyramid**: More unit tests, fewer integration tests, minimal UI tests
+- **Test Naming**: Descriptive names using backticks or `@DisplayName`
+- **Test Isolation**: Each test runs independently with proper setup/teardown
+- **Parameterized Tests**: JUnit 5's `@ParameterizedTest` for data-driven testing
+- **Critical Requirements (From review-fixes.md)**:
+  - **ViewModel Testing**: Minimum 40+ test cases for complex ViewModels
+  - **Validation Testing**: 100+ test cases covering all edge cases and boundaries
+  - **Race Condition Testing**: Test concurrent state updates and event handling
+  - **Integration Testing**: 323+ total tests for production readiness
 
 ## Common Commands
 

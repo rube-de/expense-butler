@@ -5,6 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.expensetracker.data.model.Category
 import com.expensetracker.data.model.Expense
 import com.expensetracker.data.repository.ExpenseRepository
+import com.expensetracker.domain.error.UserFacingError
+import com.expensetracker.domain.validation.AmountValidator
+import com.expensetracker.domain.validation.CategoryValidator
+import com.expensetracker.domain.validation.DescriptionValidator
+import com.expensetracker.domain.validation.TagValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,192 +27,238 @@ data class AddExpenseUiState(
     val availableTags: List<String> = emptyList(),
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
-    val errorMessage: String? = null,
+    val errorMessage: UserFacingError? = null,
     val amountError: String? = null,
     val descriptionError: String? = null,
     val categoryError: String? = null
 )
 
+sealed class AddExpenseUiEvent {
+    data class AmountChanged(val amount: BigDecimal?) : AddExpenseUiEvent()
+    data class CurrencyChanged(val currency: String) : AddExpenseUiEvent()
+    data class DescriptionChanged(val description: String) : AddExpenseUiEvent()
+    data class CategorySelected(val category: Category) : AddExpenseUiEvent()
+    data class TagsChanged(val tags: List<String>) : AddExpenseUiEvent()
+    object SaveExpense : AddExpenseUiEvent()
+    object ResetForm : AddExpenseUiEvent()
+    object ClearError : AddExpenseUiEvent()
+    object ValidateForm : AddExpenseUiEvent()
+    object LoadInitialData : AddExpenseUiEvent()
+}
+
 @HiltViewModel
 class AddExpenseViewModel @Inject constructor(
-    private val repository: ExpenseRepository
+    private val repository: ExpenseRepository,
+    private val amountValidator: AmountValidator,
+    private val descriptionValidator: DescriptionValidator,
+    private val categoryValidator: CategoryValidator,
+    private val tagValidator: TagValidator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddExpenseUiState())
     val uiState: StateFlow<AddExpenseUiState> = _uiState.asStateFlow()
+    
+    // Expose validators for UI components
+    fun getAmountValidator() = amountValidator
+    fun getDescriptionValidator() = descriptionValidator
+    fun getTagValidator() = tagValidator
+    fun getCategoryValidator() = categoryValidator
 
     init {
-        initializeDefaultCategories()
-        loadInitialData()
+        // Initialize data using the event system for consistency
+        onUiEvent(AddExpenseUiEvent.LoadInitialData)
+    }
+
+    private suspend fun handleLoadInitialData() {
+        try {
+            // Initialize default categories first
+            repository.initializeDefaultCategories()
+            
+            // Load categories and tags sequentially to avoid race conditions
+            val tags = repository.getAllTags()
+            _uiState.update { it.copy(availableTags = tags) }
+            
+            // Now collect categories - this will continue to update state
+            repository.getAllCategories().collectLatest { categories ->
+                _uiState.update { it.copy(availableCategories = categories) }
+            }
+        } catch (e: Exception) {
+            _uiState.update { 
+                it.copy(errorMessage = UserFacingError.LoadFailedWithReason(e.message ?: "Unknown error"))
+            }
+        }
     }
 
     private fun loadInitialData() {
-        viewModelScope.launch {
-            try {
-                // Load categories
-                repository.getAllCategories().collect { categories ->
-                    _uiState.update { it.copy(availableCategories = categories) }
-                }
-            } catch (e: Exception) {
-                _uiState.update { 
-                    it.copy(errorMessage = "Failed to load categories: ${e.message}")
-                }
-            }
-        }
+        onUiEvent(AddExpenseUiEvent.LoadInitialData)
+    }
 
+    fun onUiEvent(event: AddExpenseUiEvent) {
         viewModelScope.launch {
-            try {
-                // Load available tags
-                val tags = repository.getAllTags()
-                _uiState.update { it.copy(availableTags = tags) }
-            } catch (e: Exception) {
-                // Tags are optional, so don't show error for this
+            when (event) {
+                is AddExpenseUiEvent.AmountChanged -> {
+                    _uiState.update { 
+                        it.copy(
+                            amount = event.amount,
+                            amountError = null
+                        )
+                    }
+                }
+                is AddExpenseUiEvent.CurrencyChanged -> {
+                    _uiState.update { it.copy(currency = event.currency) }
+                }
+                is AddExpenseUiEvent.DescriptionChanged -> {
+                    _uiState.update { 
+                        it.copy(
+                            description = event.description,
+                            descriptionError = null
+                        )
+                    }
+                }
+                is AddExpenseUiEvent.CategorySelected -> {
+                    _uiState.update { 
+                        it.copy(
+                            selectedCategory = event.category,
+                            categoryError = null
+                        )
+                    }
+                }
+                is AddExpenseUiEvent.TagsChanged -> {
+                    _uiState.update { it.copy(selectedTags = event.tags) }
+                }
+                is AddExpenseUiEvent.SaveExpense -> {
+                    handleSaveExpense()
+                }
+                is AddExpenseUiEvent.ResetForm -> {
+                    _uiState.update {
+                        AddExpenseUiState(
+                            availableCategories = it.availableCategories,
+                            availableTags = it.availableTags
+                        )
+                    }
+                }
+                is AddExpenseUiEvent.ClearError -> {
+                    _uiState.update { it.copy(errorMessage = null) }
+                }
+                is AddExpenseUiEvent.ValidateForm -> {
+                    handleValidateForm()
+                }
+                is AddExpenseUiEvent.LoadInitialData -> {
+                    handleLoadInitialData()
+                }
             }
         }
     }
 
     fun updateAmount(amount: BigDecimal?) {
-        _uiState.update { 
-            it.copy(
-                amount = amount,
-                amountError = null
-            )
-        }
+        onUiEvent(AddExpenseUiEvent.AmountChanged(amount))
     }
 
     fun updateCurrency(currency: String) {
-        _uiState.update { it.copy(currency = currency) }
+        onUiEvent(AddExpenseUiEvent.CurrencyChanged(currency))
     }
 
     fun updateDescription(description: String) {
-        _uiState.update { 
-            it.copy(
-                description = description,
-                descriptionError = null
-            )
-        }
+        onUiEvent(AddExpenseUiEvent.DescriptionChanged(description))
     }
 
     fun selectCategory(category: Category) {
-        _uiState.update { 
-            it.copy(
-                selectedCategory = category,
-                categoryError = null
-            )
-        }
+        onUiEvent(AddExpenseUiEvent.CategorySelected(category))
     }
 
     fun updateTags(tags: List<String>) {
-        _uiState.update { it.copy(selectedTags = tags) }
+        onUiEvent(AddExpenseUiEvent.TagsChanged(tags))
     }
 
-    fun validateForm(): Boolean {
+    private suspend fun handleValidateForm(): Boolean {
         val currentState = _uiState.value
-        var isValid = true
-        var amountError: String? = null
-        var descriptionError: String? = null
-        var categoryError: String? = null
+        
+        // Validate using validators
+        val amountValidation = amountValidator.validate(currentState.amount)
+        val descriptionValidation = descriptionValidator.validate(currentState.description)
+        val categoryValidation = categoryValidator.validate(currentState.selectedCategory)
+        val tagValidation = tagValidator.validateTagList(currentState.selectedTags)
 
-        // Validate amount
-        if (currentState.amount == null) {
-            amountError = "Amount is required"
-            isValid = false
-        } else if (currentState.amount <= BigDecimal.ZERO) {
-            amountError = "Amount must be greater than 0"
-            isValid = false
-        }
-
-        // Validate description
-        if (currentState.description.isBlank()) {
-            descriptionError = "Description is required"
-            isValid = false
-        }
-
-        // Validate category
-        if (currentState.selectedCategory == null) {
-            categoryError = "Please select a category"
-            isValid = false
-        }
-
+        // Update state with validation results
         _uiState.update {
             it.copy(
-                amountError = amountError,
-                descriptionError = descriptionError,
-                categoryError = categoryError
+                amountError = amountValidation.getErrorMessage(),
+                descriptionError = descriptionValidation.getErrorMessage(),
+                categoryError = categoryValidation.getErrorMessage()
             )
         }
 
-        return isValid
+        return amountValidation.isValid && 
+               descriptionValidation.isValid && 
+               categoryValidation.isValid && 
+               tagValidation.isValid
     }
 
-    fun saveExpense() {
-        if (!validateForm()) {
+    fun validateForm(): Boolean {
+        // Legacy method for backward compatibility - triggers event-based validation
+        onUiEvent(AddExpenseUiEvent.ValidateForm)
+        // Wait for validation to complete before returning result
+        val currentState = _uiState.value
+        return currentState.run {
+            amountError == null && descriptionError == null && categoryError == null
+        }
+    }
+
+    private suspend fun handleSaveExpense() {
+        if (!handleValidateForm()) {
             return
         }
 
         val currentState = _uiState.value
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-        viewModelScope.launch {
-            try {
-                val expense = Expense(
-                    amount = currentState.amount!!,
-                    currency = currentState.currency,
-                    description = currentState.description.trim(),
-                    categoryId = currentState.selectedCategory!!.id,
-                    tags = currentState.selectedTags,
-                    date = LocalDateTime.now()
-                )
+        try {
+            val expense = Expense(
+                amount = currentState.amount!!,
+                currency = currentState.currency,
+                description = currentState.description.trim(),
+                categoryId = currentState.selectedCategory!!.id,
+                tags = currentState.selectedTags,
+                date = LocalDateTime.now()
+            )
 
-                val result = repository.insertExpense(expense)
-                
-                if (result.isSuccess) {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false,
-                            isSaved = true,
-                            errorMessage = null
-                        )
-                    }
-                } else {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Failed to save expense: ${result.exceptionOrNull()?.message}"
-                        )
-                    }
-                }
-            } catch (e: Exception) {
+            val result = repository.insertExpense(expense)
+            
+            if (result.isSuccess) {
                 _uiState.update { 
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Failed to save expense: ${e.message}"
+                        isSaved = true,
+                        errorMessage = null
+                    )
+                }
+            } else {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = UserFacingError.SaveFailedWithReason(result.exceptionOrNull()?.message ?: "Unknown error")
                     )
                 }
             }
+        } catch (e: Exception) {
+            _uiState.update { 
+                it.copy(
+                    isLoading = false,
+                    errorMessage = UserFacingError.SaveFailedWithReason(e.message ?: "Unknown error")
+                )
+            }
         }
+    }
+
+    fun saveExpense() {
+        onUiEvent(AddExpenseUiEvent.SaveExpense)
     }
 
     fun resetForm() {
-        _uiState.update {
-            AddExpenseUiState(
-                availableCategories = it.availableCategories,
-                availableTags = it.availableTags
-            )
-        }
+        onUiEvent(AddExpenseUiEvent.ResetForm)
     }
 
     fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
-    }
-
-    private fun initializeDefaultCategories() {
-        viewModelScope.launch {
-            try {
-                repository.initializeDefaultCategories()
-            } catch (e: Exception) {
-                // Log error but don't show to user as this is initialization
-            }
-        }
+        onUiEvent(AddExpenseUiEvent.ClearError)
     }
 }

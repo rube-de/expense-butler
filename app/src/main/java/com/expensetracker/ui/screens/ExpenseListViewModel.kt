@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.expensetracker.data.model.Category
 import com.expensetracker.data.model.Expense
 import com.expensetracker.data.repository.ExpenseRepository
+import com.expensetracker.domain.recurring.GenerationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -22,7 +23,9 @@ data class ExpenseListUiState(
     val endDate: LocalDate? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val showFilters: Boolean = false
+    val showFilters: Boolean = false,
+    val showGenerationBanner: Boolean = false,
+    val generationMessage: String? = null
 )
 
 @HiltViewModel
@@ -48,8 +51,8 @@ class ExpenseListViewModel @Inject constructor(
     private fun loadInitialData() {
         viewModelScope.launch {
             try {
-                // Load categories
-                repository.getAllCategories().collect { categories ->
+                // Load categories using collectLatest for proper Flow collection
+                repository.getAllCategories().collectLatest { categories ->
                     _uiState.update { it.copy(categories = categories) }
                 }
             } catch (e: Exception) {
@@ -206,6 +209,51 @@ class ExpenseListViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+    
+    // Generation Result Handling
+    
+    fun setGenerationResult(result: GenerationResult?) {
+        if (result == null) {
+            // No generation result, don't show banner
+            _uiState.update { 
+                it.copy(
+                    showGenerationBanner = false,
+                    generationMessage = null
+                )
+            }
+            return
+        }
+        
+        if (result.hasGenerated) {
+            // Show banner with generation message
+            _uiState.update { 
+                it.copy(
+                    showGenerationBanner = true,
+                    generationMessage = result.message
+                )
+            }
+            
+            // Refresh expenses to show newly generated ones
+            loadInitialData()
+        } else {
+            // No expenses were generated, don't show banner
+            _uiState.update { 
+                it.copy(
+                    showGenerationBanner = false,
+                    generationMessage = null
+                )
+            }
+        }
+    }
+    
+    fun dismissGenerationBanner() {
+        _uiState.update { 
+            it.copy(
+                showGenerationBanner = false,
+                generationMessage = null
+            )
+        }
     }
 
     private fun initializeDefaultCategories() {

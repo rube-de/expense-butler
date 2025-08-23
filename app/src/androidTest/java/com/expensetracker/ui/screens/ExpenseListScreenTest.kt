@@ -95,8 +95,8 @@ class ExpenseListScreenTest {
             }
         }
 
-        // Verify search field exists and has correct value
-        composeTestRule.onNodeWithText("coffee").assertIsDisplayed()
+        // Verify search field exists and has correct value (there's a search field and an expense item)
+        composeTestRule.onAllNodesWithText("coffee")[0].assertIsDisplayed()
     }
 
     @Test

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Default language - English -->
+    <locale android:name="en"/>
+    
+    <!-- Additional languages can be added here as translations become available -->
+    <!-- Examples:
+    <locale android:name="es"/>  Spanish
+    <locale android:name="fr"/>  French
+    <locale android:name="de"/>  German
+    <locale android:name="ja"/>  Japanese
+    <locale android:name="zh"/>  Chinese
+    <locale android:name="pt"/>  Portuguese
+    <locale android:name="it"/>  Italian
+    <locale android:name="ru"/>  Russian
+    <locale android:name="ar"/>  Arabic
+    <locale android:name="hi"/>  Hindi
+    -->
+</locale-config>

@@ -46,6 +46,13 @@ class ExpenseRepositoryImpl @Inject constructor(
             }
         }
 
+    override fun getExpensesByRecurringExpenseId(recurringExpenseId: Long): Flow<List<Expense>> =
+        expenseDao.getAllExpenses().map { expenses ->
+            expenses.filter { expense ->
+                expense.recurringExpenseId == recurringExpenseId
+            }
+        }
+
     override fun searchExpenses(searchText: String): Flow<List<Expense>> =
         expenseDao.searchExpensesByDescription(searchText)
 
@@ -434,6 +441,64 @@ class ExpenseRepositoryImpl @Inject constructor(
             categoryDao.getCategoryCount()
         } catch (e: Exception) {
             0
+        }
+    }
+
+    override suspend fun getCategorySpendingBreakdown(startDate: LocalDate, endDate: LocalDate): Map<Long, BigDecimal> {
+        return try {
+            val startDateTime = startDate.atStartOfDay()
+            val endDateTime = endDate.atTime(23, 59, 59)
+            val expenses = expenseDao.getExpensesByDateRange(startDateTime, endDateTime)
+            
+            // This is a simplified approach - collect the flow once
+            // In production, you'd handle this more efficiently
+            val expenseList = mutableListOf<Expense>()
+            expenses.collect { expenseList.addAll(it) }
+            
+            expenseList.groupBy { it.categoryId }
+                .mapValues { (_, expenseList) -> expenseList.sumOf { it.amount } }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    override suspend fun getTagSpendingBreakdown(startDate: LocalDate, endDate: LocalDate): Map<String, BigDecimal> {
+        return try {
+            val startDateTime = startDate.atStartOfDay()
+            val endDateTime = endDate.atTime(23, 59, 59)
+            val expenses = expenseDao.getExpensesByDateRange(startDateTime, endDateTime)
+            
+            // This is a simplified approach - collect the flow once
+            val expenseList = mutableListOf<Expense>()
+            expenses.collect { expenseList.addAll(it) }
+            
+            val tagSpending = mutableMapOf<String, BigDecimal>()
+            expenseList.forEach { expense ->
+                expense.tags.forEach { tag ->
+                    tagSpending[tag] = tagSpending.getOrDefault(tag, BigDecimal.ZERO) + expense.amount
+                }
+            }
+            tagSpending
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    override suspend fun getMonthlySpendingTrends(startDate: LocalDate, endDate: LocalDate): List<Pair<LocalDate, BigDecimal>> {
+        return try {
+            val startDateTime = startDate.atStartOfDay()
+            val endDateTime = endDate.atTime(23, 59, 59)
+            val expenses = expenseDao.getExpensesByDateRange(startDateTime, endDateTime)
+            
+            // This is a simplified approach - collect the flow once
+            val expenseList = mutableListOf<Expense>()
+            expenses.collect { expenseList.addAll(it) }
+            
+            expenseList.groupBy { it.date.toLocalDate().withDayOfMonth(1) }
+                .map { (month, expenseList) -> month to expenseList.sumOf { it.amount } }
+                .sortedBy { it.first }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
