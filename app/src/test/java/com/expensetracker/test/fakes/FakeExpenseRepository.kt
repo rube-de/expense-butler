@@ -10,11 +10,10 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 /**
- * Fake implementation of ExpenseRepository for testing.
+ * Complete fake implementation of ExpenseRepository for testing purposes.
  * Provides in-memory storage and controllable behavior for tests.
  * 
- * This is a simplified implementation focusing on the most commonly used methods.
- * Methods not implemented will throw NotImplementedError.
+ * This class implements all methods of ExpenseRepository and is intended for use in unit and integration tests.
  */
 class FakeExpenseRepository : ExpenseRepository {
     
