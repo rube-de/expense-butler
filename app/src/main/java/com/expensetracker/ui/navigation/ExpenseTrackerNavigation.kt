@@ -49,7 +49,8 @@ private val bottomNavItems = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseTrackerApp(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController = rememberNavController(),
+    generationResult: com.expensetracker.domain.recurring.GenerationResult? = null
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -86,7 +87,8 @@ fun ExpenseTrackerApp(
     ) { innerPadding ->
         ExpenseTrackerNavHost(
             navController = navController,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            generationResult = generationResult
         )
     }
 }
@@ -94,7 +96,8 @@ fun ExpenseTrackerApp(
 @Composable
 fun ExpenseTrackerNavHost(
     navController: NavHostController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    generationResult: com.expensetracker.domain.recurring.GenerationResult? = null
 ) {
     NavHost(
         navController = navController,
@@ -108,7 +111,8 @@ fun ExpenseTrackerNavHost(
                 },
                 onNavigateToEditExpense = { expenseId ->
                     navController.navigate(Screen.EditExpense.createRoute(expenseId))
-                }
+                },
+                generationResult = generationResult
             )
         }
         

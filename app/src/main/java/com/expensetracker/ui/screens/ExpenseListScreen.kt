@@ -5,7 +5,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.expensetracker.data.model.Category
 import com.expensetracker.data.model.Expense
+import com.expensetracker.domain.recurring.GenerationResult
 import com.expensetracker.ui.components.ExpenseCard
 import com.expensetracker.ui.components.SearchBar
 import com.expensetracker.ui.theme.ExpenseTrackerTheme
@@ -34,12 +37,18 @@ import java.time.LocalDateTime
 fun ExpenseListScreen(
     onNavigateToAddExpense: () -> Unit,
     onNavigateToEditExpense: (Long) -> Unit,
+    generationResult: GenerationResult? = null,
     modifier: Modifier = Modifier,
     viewModel: ExpenseListViewModel = hiltViewModel()
 ) {
     LogCompositions("ExpenseListScreen")
     
     val uiState by viewModel.uiState.collectAsState()
+    
+    // Handle generation result
+    LaunchedEffect(generationResult) {
+        viewModel.setGenerationResult(generationResult)
+    }
     
     // Handle error messages
     uiState.errorMessage?.let { errorMessage ->
@@ -91,6 +100,7 @@ fun ExpenseListScreen(
             onDateRangeChanged = viewModel::updateDateRange,
             onClearFilters = viewModel::clearFilters,
             onToggleFilters = viewModel::toggleFilters,
+            onDismissGenerationBanner = viewModel::dismissGenerationBanner,
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -109,6 +119,7 @@ fun ExpenseListContent(
     onDateRangeChanged: (LocalDate?, LocalDate?) -> Unit,
     onClearFilters: () -> Unit,
     onToggleFilters: () -> Unit,
+    onDismissGenerationBanner: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     LogCompositions("ExpenseListContent")
@@ -116,6 +127,17 @@ fun ExpenseListContent(
     Column(
         modifier = modifier.padding(MaterialTheme.spacing.medium)
     ) {
+        // Generation Banner
+        if (uiState.showGenerationBanner && uiState.generationMessage != null) {
+            GenerationBanner(
+                message = uiState.generationMessage,
+                onDismiss = onDismissGenerationBanner,
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            Spacer(modifier = Modifier.height(MaterialTheme.spacing.medium))
+        }
+        
         // Search Bar
         SearchBar(
             searchText = uiState.searchText,
@@ -409,7 +431,61 @@ private fun ExpenseListScreenPreview() {
             onTagFilterChanged = { },
             onDateRangeChanged = { _, _ -> },
             onClearFilters = { },
-            onToggleFilters = { }
+            onToggleFilters = { },
+            onDismissGenerationBanner = { }
         )
+    }
+}
+
+@Composable
+private fun GenerationBanner(
+    message: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(MaterialTheme.spacing.small),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
     }
 }

@@ -148,20 +148,47 @@ private fun RecurringExpensesTopBar(
                     fontWeight = FontWeight.Medium
                 )
                 if (lastSyncTime > 0L) {
+                    val syncStatus = if (syncMessage.isNotEmpty()) {
+                        syncMessage
+                    } else {
+                        "Last generated: ${formatSyncTime(lastSyncTime)}"
+                    }
                     Text(
-                        text = formatSyncTime(lastSyncTime),
+                        text = syncStatus,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (syncMessage.contains("generated", ignoreCase = true)) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
                     )
                 }
             }
         },
         actions = {
-            IconButton(onClick = onSyncClick) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = stringResource(R.string.action_refresh)
+            // Show sync button with different states
+            if (syncMessage.contains("Syncing", ignoreCase = true)) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .padding(12.dp),
+                    strokeWidth = 2.dp
                 )
+            } else {
+                IconButton(
+                    onClick = onSyncClick,
+                    modifier = Modifier.testTag("sync_button")
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.action_refresh),
+                        tint = if (syncMessage.contains("Up to date", ignoreCase = true)) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
             }
         },
         modifier = modifier
@@ -430,10 +457,28 @@ private fun RecurringExpenseDeleteDialog(
 }
 
 private fun formatSyncTime(timestamp: Long): String {
+    if (timestamp == 0L) return "Never"
+    
     val instant = Instant.ofEpochMilli(timestamp)
     val zonedDateTime = instant.atZone(ZoneId.systemDefault())
-    val formatter = DateTimeFormatter.ofPattern("MMM dd, HH:mm")
-    return "Last sync: ${zonedDateTime.format(formatter)}"
+    val now = Instant.now().atZone(ZoneId.systemDefault())
+    
+    // Calculate the difference
+    val daysDiff = java.time.Duration.between(zonedDateTime, now).toDays()
+    val hoursDiff = java.time.Duration.between(zonedDateTime, now).toHours()
+    val minutesDiff = java.time.Duration.between(zonedDateTime, now).toMinutes()
+    
+    return when {
+        minutesDiff < 1 -> "Just now"
+        minutesDiff < 60 -> "$minutesDiff min ago"
+        hoursDiff < 24 -> "$hoursDiff hour${if (hoursDiff != 1L) "s" else ""} ago"
+        daysDiff == 1L -> "Yesterday"
+        daysDiff < 7 -> "$daysDiff days ago"
+        else -> {
+            val formatter = DateTimeFormatter.ofPattern("MMM dd, HH:mm")
+            zonedDateTime.format(formatter)
+        }
+    }
 }
 
 private fun formatAmount(amount: BigDecimal, currency: String): String {
